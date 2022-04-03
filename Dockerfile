@@ -10,5 +10,5 @@ RUN pip3 install pyyaml yamale && \
     chmod +x /usr/local/bin/miracron-update /usr/local/bin/miracron-show /usr/local/bin/miracron-test && \
     echo "${MIRACRON_UPDATE_TIME} miracron-update" | busybox crontab -
 
-COPY miracron.py schema.yml /usr/local/lib/miracron/
+COPY ../miracron.py schema.yml /usr/local/lib/miracron/
 CMD ["busybox", "crond", "-f", "-l", "8", "-L", "/dev/stderr"]

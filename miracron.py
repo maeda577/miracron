@@ -1,6 +1,7 @@
 import argparse
 import datetime
 import json
+import logging
 import os
 import sys
 import urllib.parse
@@ -17,7 +18,8 @@ FILENAME_TRANS = str.maketrans(
         '\0': None,
         '\r': None,
         '\n': ' ',
-        '\'': '_'
+        '\'': '_',
+        '#': '_',
     }
 )
 
@@ -64,87 +66,108 @@ def _is_match_string(program, rule) -> bool:
 
     return True
 
-# 引数パース
-parser = argparse.ArgumentParser(
-    description='A cron rule generator for scheduled TV recording',
-    epilog='If stdin is piped, it will be piped to stdout as it is',
-    exit_on_error=True,
-)
-parser.add_argument('-V', '--version', action='version', version=f'%(prog)s {VERSION_STR}')
-parser.add_argument(
-    '-c', '--config',
-    metavar='<config>',
-    default=os.getenv('MIRACRON_CONFIG', '/etc/miracron/config.yml'),
-    help='path to a configuration file [env: MIRACRON_CONFIG] [default: /etc/miracron/config.yml]'
-)
-args = parser.parse_args()
+if __name__ == '__main__':
+    # ログ設定
+    logger = logging.getLogger('miracron')
+    logger.addHandler(logging.StreamHandler(stream = sys.stderr))
+    logger.setLevel(os.getenv('MIRACRON_LOG', 'info').upper())
 
-# configファイルの事前検証
-try:
-    schema = yamale.make_schema(os.path.join(os.path.dirname(__file__), 'schema.yml'))
-    data = yamale.make_data(args.config)
-    yamale.validate(schema, data)
-except Exception as e:
-    print(str(e), file=sys.stderr)
-    sys.exit(1)
+    logger.info('Start miracron.')
+    logger.debug('Start loading configuration.')
+    # 引数パース
+    parser = argparse.ArgumentParser(
+        description='A cron rule generator for scheduled TV recording',
+        epilog='If stdin is piped, it will be piped to stdout as it is.',
+        exit_on_error=True,
+    )
+    parser.add_argument('-V', '--version', action='version', version=f'%(prog)s {VERSION_STR}')
+    parser.add_argument(
+        '-c', '--config',
+        metavar='<config>',
+        default=os.getenv('MIRACRON_CONFIG', '/etc/miracron/config.yml'),
+        help='path to a configuration file [env: MIRACRON_CONFIG] [default: /etc/miracron/config.yml]'
+    )
+    args = parser.parse_args()
 
-# config読み取り
-config = data[0][0]
+    # configファイルの事前検証
+    try:
+        schema = yamale.make_schema(os.path.join(os.path.dirname(__file__), 'schema.yml'))
+        data = yamale.make_data(args.config)
+        yamale.validate(schema, data)
+    except Exception as e:
+        logger.error('Failed to parse configuration.')
+        logger.exception(e)
+        sys.exit(1)
 
-# デフォルト値の設定
-if 'recPriority' not in config.keys():
-    config['recPriority'] = 2
-if 'startMarginSec' not in config.keys():
-    config['startMarginSec'] = 15
-if 'recordDirectory' not in config.keys():
-    config['recordDirectory'] = '/var/lib/miracron/recorded'
-if 'rules' in config.keys():
-    for rule in config['rules']:
-        if 'matchName' not in rule.keys():
-            rule['matchName'] = True
-        if 'matchDescription' not in rule.keys():
-            rule['matchDescription'] = False
-        if 'matchExtended' not in rule.keys():
-            rule['matchExtended'] = False
+    # config読み取り
+    config = data[0][0]
 
-# 番組表の取得
-programs_url = urllib.parse.urljoin(config['mirakurunUrl'], 'api/programs')
-req = urllib.request.Request(programs_url)
-try:
-    with urllib.request.urlopen(req) as res:
-        programs = json.load(res)
-except Exception as e:
-    print(str(e), file=sys.stderr)
-    sys.exit(1)
+    # デフォルト値の設定
+    if 'recPriority' not in config.keys():
+        config['recPriority'] = 2
+    if 'startMarginSec' not in config.keys():
+        config['startMarginSec'] = 5
+    if 'recordDirectory' not in config.keys():
+        config['recordDirectory'] = '/var/lib/miracron/recorded'
+    if 'rules' in config.keys():
+        for rule in config['rules']:
+            if 'matchName' not in rule.keys():
+                rule['matchName'] = True
+            if 'matchDescription' not in rule.keys():
+                rule['matchDescription'] = False
+            if 'matchExtended' not in rule.keys():
+                rule['matchExtended'] = False
 
-# ルールにマッチするものに絞り込んで日付順に並び替え
-match_programs = sorted(filter(lambda p:_is_match_config(p, config), programs), key=lambda p: p['startAt'])
+    logger.debug('Loading configuration is completed. Start getting the programs.')
 
-# パイプで渡された値があればそのまま出す
-if(sys.stdin.isatty() == False):
-    print(sys.stdin.read())
+    # 番組表の取得
+    programs_url = urllib.parse.urljoin(config['mirakurunUrl'], 'api/programs')
+    req = urllib.request.Request(programs_url)
+    try:
+        with urllib.request.urlopen(req) as res:
+            programs = json.load(res)
+    except Exception as e:
+        logger.error('Failed to get programs')
+        logger.exception(e)
+        sys.exit(1)
 
-margin_sec = datetime.timedelta(seconds = config['startMarginSec'])
-timezone = datetime.datetime.utcnow().astimezone().tzinfo
-# cronルールの出力
-for program in match_programs:
-    start_at = datetime.datetime.fromtimestamp(program['startAt']/1000, timezone)
-    start_margin = start_at - margin_sec
-    info_url = urllib.parse.urljoin(config['mirakurunUrl'], f"api/programs/{program['id']}")
-    stream_url = urllib.parse.urljoin(config['mirakurunUrl'], f"api/programs/{program['id']}/stream")
+    # ルールにマッチするものに絞り込んで日付順に並び替え
+    match_programs = sorted(filter(lambda p:_is_match_config(p, config), programs), key=lambda p: p['startAt'])
 
-    # 出力先などの準備
-    dir_name = start_at.strftime("%Y%m%d") + "_" + (program['name'].translate(FILENAME_TRANS) if 'name' in program.keys() else '')
-    dir_path = os.path.join(config['recordDirectory'], dir_name)
-    stream_path = os.path.join(dir_path, str(program['id']) + '.m2ts')
-    info_path = os.path.join(dir_path, str(program['id']) + '.json')
-    log_path = os.path.join(dir_path, str(program['id']) + '.log')
+    logger.debug('Getting programs and filtering is completed. Start generation cron rules.')
 
-    # cron文字列
-    comment_str = f"# ID:{program['id']} ServiceID: {program['serviceId']} StartAt: {start_at} {dir_name}"
-    cron_str = f"{start_margin.minute} {start_margin.hour} {start_margin.day} {start_margin.month} * " \
-        f"sleep {start_margin.second} && " \
-        f"curl --silent --show-error --create-dirs --output '{stream_path}' --header 'X-Mirakurun-Priority: {config['recPriority']}' --trace-ascii '{log_path}' --trace-time {stream_url} && " \
-        f"curl --silent --show-error --create-dirs --output '{info_path}' {info_url}"
+    # パイプで渡された値があればそのまま出す
+    if(sys.stdin.isatty() == False):
+        print(sys.stdin.read())
 
-    print(comment_str, cron_str, '#####', sep='\n')
+    margin_sec = datetime.timedelta(seconds = config['startMarginSec'])
+    timezone = datetime.datetime.utcnow().astimezone().tzinfo
+    # cronルールの出力
+    for program in match_programs:
+        start_at = datetime.datetime.fromtimestamp(program['startAt']/1000, timezone)
+        start_margin = start_at - margin_sec
+        info_url = urllib.parse.urljoin(config['mirakurunUrl'], f"api/programs/{program['id']}")
+        stream_url = urllib.parse.urljoin(config['mirakurunUrl'], f"api/programs/{program['id']}/stream")
+
+        # 出力先などの準備
+        dir_name = start_at.strftime("%Y%m%d") + "_" + (program['name'].translate(FILENAME_TRANS) if 'name' in program.keys() else '')
+        dir_path = os.path.join(config['recordDirectory'], dir_name)
+        stream_path = os.path.join(dir_path, str(program['id']) + '.m2ts')
+        info_path = os.path.join(dir_path, str(program['id']) + '.json')
+        log_path = os.path.join(dir_path, str(program['id']) + '.log')
+
+        # cron文字列
+        comment_str = f"# ID:{program['id']} ServiceID: {program['serviceId']} StartAt: {start_at} {dir_name}"
+        cron_str = f"{start_margin.minute} {start_margin.hour} {start_margin.day} {start_margin.month} * " \
+            f"sleep {start_margin.second} && " \
+            f"curl --silent --show-error --create-dirs --output '{stream_path}' --header 'X-Mirakurun-Priority: {config['recPriority']}' --trace-ascii '{log_path}' --trace-time {stream_url} && " \
+            f"curl --silent --show-error --create-dirs --output '{info_path}' {info_url}"
+
+        logger.debug(comment_str)
+        logger.debug(cron_str)
+        logger.debug('#####')
+        print(comment_str)
+        print(cron_str)
+        print('#####')
+
+    logger.info(f"Miracron completed. Scheduled program conut: {len(match_programs)}")

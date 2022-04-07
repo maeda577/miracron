@@ -1,14 +1,14 @@
-FROM docker.io/library/python:3
-ARG MIRACRON_UPDATE_TIME="0 5 * * *"
+FROM docker.io/library/python:3-slim
+ARG MIRACRON_UPDATE_SCHEDULE="0 5 * * *"
 
 RUN pip3 install pyyaml yamale && \
-    apt update && apt install --yes busybox-static && apt-get clean && rm -rf /var/lib/apt/lists/* && \
+    apt update && apt install --yes curl busybox-static && apt-get clean && rm -rf /var/lib/apt/lists/* && \
     mkdir -p /var/spool/cron/crontabs && \
     (echo '#!/bin/bash'; echo "set -o pipefail && busybox crontab -l | head -n 1 | python3 /usr/local/lib/miracron/miracron.py | busybox crontab -") > /usr/local/bin/miracron-update && \
-    (echo '#!/bin/bash'; echo "busybox crontab -l | grep '^#'") > /usr/local/bin/miracron-show && \
+    (echo '#!/bin/bash'; echo "busybox crontab -l") > /usr/local/bin/miracron-show && \
     (echo '#!/bin/bash'; echo "python3 /usr/local/lib/miracron/miracron.py") > /usr/local/bin/miracron-test && \
     chmod +x /usr/local/bin/miracron-update /usr/local/bin/miracron-show /usr/local/bin/miracron-test && \
-    echo "${MIRACRON_UPDATE_TIME} miracron-update" | busybox crontab -
+    echo "${MIRACRON_UPDATE_SCHEDULE} miracron-update" | busybox crontab -
 
-COPY ../miracron.py schema.yml /usr/local/lib/miracron/
+COPY miracron.py schema.yml /usr/local/lib/miracron/
 CMD ["busybox", "crond", "-f", "-l", "8", "-L", "/dev/stderr"]

@@ -67,13 +67,6 @@ def _is_match_string(program, rule) -> bool:
     return True
 
 if __name__ == '__main__':
-    # ログ設定
-    logger = logging.getLogger('miracron')
-    logger.addHandler(logging.StreamHandler(stream = sys.stderr))
-    logger.setLevel(os.getenv('MIRACRON_LOG', 'info').upper())
-
-    logger.info('Start miracron.')
-    logger.debug('Start loading configuration.')
     # 引数パース
     parser = argparse.ArgumentParser(
         description='A cron rule generator for scheduled TV recording',
@@ -87,7 +80,21 @@ if __name__ == '__main__':
         default=os.getenv('MIRACRON_CONFIG', '/etc/miracron/config.yml'),
         help='path to a configuration file [env: MIRACRON_CONFIG] [default: /etc/miracron/config.yml]'
     )
+    parser.add_argument(
+        '-l', '--loglevel',
+        choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG'],
+        default=os.getenv('MIRACRON_LOG', 'WARNING'),
+        help='the threshold of logging level [env: MIRACRON_LOG] [default: WARNING]'
+    )
     args = parser.parse_args()
+
+    # ログ設定
+    logger = logging.getLogger('miracron')
+    logger.addHandler(logging.StreamHandler(stream = sys.stderr))
+    logger.setLevel(args.loglevel.upper())
+
+    logger.info('Start miracron.')
+    logger.debug('Start loading configuration.')
 
     # configファイルの事前検証
     try:
@@ -134,7 +141,7 @@ if __name__ == '__main__':
     # ルールにマッチするものに絞り込んで日付順に並び替え
     match_programs = sorted(filter(lambda p:_is_match_config(p, config), programs), key=lambda p: p['startAt'])
 
-    logger.debug('Getting programs and filtering is completed. Start generation cron rules.')
+    logger.debug('Getting programs and filtering is completed. Start generating cron rules.')
 
     # パイプで渡された値があればそのまま出す
     if(sys.stdin.isatty() == False):
@@ -170,4 +177,4 @@ if __name__ == '__main__':
         print(cron_str)
         print('#####')
 
-    logger.info(f"Miracron completed. Scheduled program conut: {len(match_programs)}")
+    logger.info(f"Miracron completed. Scheduled programs count: {len(match_programs)}")

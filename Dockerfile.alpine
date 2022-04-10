@@ -1,0 +1,12 @@
+FROM docker.io/library/python:3-alpine
+ARG MIRACRON_UPDATE_SCHEDULE="0 5 * * *"
+
+RUN pip3 install pyyaml yamale && \
+    (echo '#!/bin/ash'; echo "(crontab -l | head -n 1; python3 /usr/local/lib/miracron/miracron.py) | busybox crontab -") > /usr/local/bin/miracron-update && \
+    (echo '#!/bin/ash'; echo "crontab -l") > /usr/local/bin/miracron-show && \
+    (echo '#!/bin/ash'; echo "python3 /usr/local/lib/miracron/miracron.py") > /usr/local/bin/miracron-test && \
+    chmod +x /usr/local/bin/miracron-update /usr/local/bin/miracron-show /usr/local/bin/miracron-test && \
+    echo "${MIRACRON_UPDATE_SCHEDULE} miracron-update" | busybox crontab -
+
+COPY miracron.py schema.yml /usr/local/lib/miracron/
+CMD ["crond", "-f", "-d", "8"]

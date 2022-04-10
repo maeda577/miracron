@@ -33,7 +33,7 @@ services:
   miracron-samba:
     container_name: miracron-samba
     build:
-      context: https://github.com/maeda577/miracron.git#${MIRACRON_TAG:-main}:docker
+      context: https://github.com/maeda577/miracron.git#${MIRACRON_TAG:-main}
       dockerfile: Dockerfile.debian-samba
       args:
         # sambaにSMBアクセスする際のrootユーザーのパスワード(デフォルト: P@ssw0rd!)

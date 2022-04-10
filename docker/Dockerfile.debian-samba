@@ -1,0 +1,7 @@
+FROM docker.io/library/debian:bullseye-slim
+ARG MIRACRON_SAMBA_PASSWORD=P@ssw0rd!
+RUN apt update && apt install --yes samba && apt-get clean && rm -rf /var/lib/apt/lists/* && \
+    (echo "${MIRACRON_SAMBA_PASSWORD}"; echo "${MIRACRON_SAMBA_PASSWORD}") | pdbedit -a -u root --password-from-stdin
+COPY smb.conf /etc/samba/
+CMD ["smbd", "--foreground", "--log-stdout", "--no-process-group", "-s", "/etc/samba/smb.conf"]
+EXPOSE 445

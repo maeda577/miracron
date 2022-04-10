@@ -1,0 +1,7 @@
+FROM docker.io/library/alpine:3
+ARG MIRACRON_SAMBA_PASSWORD=P@ssw0rd!
+RUN apk add samba && \
+    (echo "${MIRACRON_SAMBA_PASSWORD}"; echo "${MIRACRON_SAMBA_PASSWORD}") | pdbedit -a -u root --password-from-stdin
+COPY docker/smb.conf /etc/samba/
+CMD ["smbd", "--foreground", "--debug-stdout", "--no-process-group", "-s", "/etc/samba/smb.conf"]
+EXPOSE 445

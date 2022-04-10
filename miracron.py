@@ -70,7 +70,6 @@ if __name__ == '__main__':
     # 引数パース
     parser = argparse.ArgumentParser(
         description='A cron rule generator for scheduled TV recording',
-        epilog='If stdin is piped, it will be piped to stdout as it is.',
         exit_on_error=True,
     )
     parser.add_argument('-V', '--version', action='version', version=f'%(prog)s {VERSION_STR}')
@@ -143,10 +142,6 @@ if __name__ == '__main__':
 
     logger.debug('Getting programs and filtering is completed. Start generating cron rules.')
 
-    # パイプで渡された値があればそのまま出す
-    if(sys.stdin.isatty() == False):
-        print(sys.stdin.read())
-
     margin_sec = datetime.timedelta(seconds = config['startMarginSec'])
     timezone = datetime.datetime.utcnow().astimezone().tzinfo
     # cronルールの出力
@@ -161,13 +156,15 @@ if __name__ == '__main__':
         dir_path = os.path.join(config['recordDirectory'], dir_name)
         stream_path = os.path.join(dir_path, str(program['id']) + '.m2ts')
         info_path = os.path.join(dir_path, str(program['id']) + '.json')
+        log_path = os.path.join(dir_path, str(program['id']) + '.log')
 
         # cron文字列
         comment_str = f"# ID:{program['id']} ServiceID: {program['serviceId']} StartAt: {start_at} {dir_name}"
         cron_str = f"{start_margin.minute} {start_margin.hour} {start_margin.day} {start_margin.month} * " \
             f"sleep {start_margin.second} && " \
-            f"curl --silent --show-error --create-dirs --output '{stream_path}' --header 'X-Mirakurun-Priority: {config['recPriority']}' {stream_url} && " \
-            f"curl --silent --show-error --create-dirs --output '{info_path}' {info_url}"
+            f"mkdir -p '{dir_path}' && " \
+            f"wget -o '{log_path}' -O '{stream_path}' --header 'X-Mirakurun-Priority: {config['recPriority']}' {stream_url} && " \
+            f"wget -q -O '{info_path}' {info_url}"
 
         logger.debug(comment_str)
         logger.debug(cron_str)
@@ -176,4 +173,4 @@ if __name__ == '__main__':
         print(cron_str)
         print('#####')
 
-    logger.info(f"Miracron completed. Scheduled programs count: {len(match_programs)}")
+    logger.info(f"Miracron completed. Scheduled program count: {len(match_programs)}")

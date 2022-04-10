@@ -1,0 +1,12 @@
+{
+    "name": "miracron",
+    "image": "mcr.microsoft.com/vscode/devcontainers/python:3",
+    "containerEnv": {
+        "TZ": "Asia/Tokyo"
+    },
+    "extensions": [
+        "ms-python.python",
+        "EditorConfig.EditorConfig"
+    ],
+    "postCreateCommand": "pip3 install pyyaml yamale && apt update && apt install --yes busybox-static"
+}

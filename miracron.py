@@ -161,13 +161,12 @@ if __name__ == '__main__':
         dir_path = os.path.join(config['recordDirectory'], dir_name)
         stream_path = os.path.join(dir_path, str(program['id']) + '.m2ts')
         info_path = os.path.join(dir_path, str(program['id']) + '.json')
-        log_path = os.path.join(dir_path, str(program['id']) + '.log')
 
         # cron文字列
         comment_str = f"# ID:{program['id']} ServiceID: {program['serviceId']} StartAt: {start_at} {dir_name}"
         cron_str = f"{start_margin.minute} {start_margin.hour} {start_margin.day} {start_margin.month} * " \
             f"sleep {start_margin.second} && " \
-            f"curl --silent --show-error --create-dirs --output '{stream_path}' --header 'X-Mirakurun-Priority: {config['recPriority']}' --trace-ascii '{log_path}' --trace-time {stream_url} && " \
+            f"curl --silent --show-error --create-dirs --output '{stream_path}' --header 'X-Mirakurun-Priority: {config['recPriority']}' {stream_url} && " \
             f"curl --silent --show-error --create-dirs --output '{info_path}' {info_url}"
 
         logger.debug(comment_str)

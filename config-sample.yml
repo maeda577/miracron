@@ -1,0 +1,38 @@
+# 設定ファイルはYAMLで記載します
+# 細かい記法はGoogle検索してください
+
+# [必須] 利用するmirakc/MirakurunのURL
+mirakurunUrl: http://mirakc:40772/
+# 録画時にmirakc/Mirakurunへ渡される優先度(デフォルト:2)
+recPriority: 2
+# 予約時のcurl開始マージン(デフォルト:5) (長くすると録画に失敗する可能性あり)
+startMarginSec: 5
+# 録画ファイルを書き出すディレクトリ(デフォルト:/var/lib/miracron/recorded)
+recordDirectory: /var/lib/miracron/recorded
+
+# 録画ルール(複数指定可)
+rules:
+    # 検索するキーワード(複数指定可 and検索)
+  - keywords:
+      - きょうの料理
+      - ビギナーズ
+    # 除外するキーワード(複数指定可)
+    excludeKeywords:
+      - "[再]"
+    # 検索対象にするチャンネルのサービスID(複数指定可)
+    serviceIds:
+      - 1032
+    # 放送タイトルからキーワード・除外キーワードのマッチングを行うか(デフォルト:true)
+    matchName: true
+    # 放送概要からキーワード・除外キーワードのマッチングを行うか(デフォルト:false)
+    matchDescription: false
+    # 放送詳細からキーワード・除外キーワードのマッチングを行うか(デフォルト:false)
+    matchExtended: false
+
+  # 最小限の録画ルールを作る場合は以下のようになる
+  - keywords:
+      - 将棋フォーカス
+
+# 単発で録画する放送ID(複数指定可)
+oneshots:
+  - 327420107235262

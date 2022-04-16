@@ -5,8 +5,7 @@ services:
     container_name: miracron
     build:
       context: https://github.com/maeda577/miracron.git#${MIRACRON_TAG:-main}
-      # Alpineベースのイメージにする場合はDockerfile.alpineに変更
-      dockerfile: Dockerfile.debian
+      dockerfile: Dockerfile.alpine
       args:
         # 録画スケジュールを再生成するスケジュール(デフォルト: 毎日の午前5時)
         MIRACRON_UPDATE_SCHEDULE: "0 5 * * *"
@@ -23,7 +22,7 @@ services:
     environment:
       TZ: Asia/Tokyo
       # ログを出力するレベル (CRITICAL, ERROR, WARNING, INFO, DEBUG のいずれか) (デフォルト: WARNING)
-      MIRACRON_LOG: INFO
+      MIRACRON_LOG: WARNING
       # コンフィグファイルのコンテナ内のパス(デフォルト: /etc/miracron/config.yml)
       MIRACRON_CONFIG: /etc/miracron/config.yml
     init: true

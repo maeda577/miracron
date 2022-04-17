@@ -42,8 +42,8 @@ sudo docker exec miracron miracron-show
 sudo docker exec -it miracron-samba pdbedit -a -u root
 ```
 
-## 録画ルールの更新
-config.ymlのルールはそれなりに書きにくいです。ルールの編集とスケジュール即時更新を細かく繰り返すと多少ましになります。
+## 録画スケジュールの手動更新
+録画スケジュールは1日1回自動更新されるため、手動での更新は不要です。ただし、config.ymlのルール編集は挙動が予測しにくいため編集とスケジュール即時更新を細かく繰り返すのがお勧めです。
 
 ``` shell
 # インストール時に作成した作業フォルダへ移動

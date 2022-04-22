@@ -32,7 +32,7 @@ vi config.yml
 vi docker-compose.yml
 
 # イメージのビルドとコンテナ起動
-sudo docker compose up --detach
+sudo docker-compose up --detach
 
 # 録画スケジュールの即時更新
 sudo docker exec miracron miracron-update
@@ -68,12 +68,12 @@ sudo docker exec miracron miracron-show
 # インストール時に作成した作業フォルダへ移動
 cd ~/miracron
 # コンテナ停止と削除
-sudo docker compose down
+sudo docker-compose down
 # イメージ削除
 sudo docker image rm localhost/miracron:latest
 sudo docker image rm localhost/miracron-samba:latest
 # イメージのビルドとコンテナ起動
-sudo docker compose up --detach
+sudo docker-compose up --detach
 ```
 
 ## アンインストール方法
@@ -83,7 +83,7 @@ sudo docker compose up --detach
 # インストール時に作成した作業フォルダへ移動
 cd ~/miracron
 # コンテナ停止と削除
-sudo docker compose down
+sudo docker-compose down
 # イメージ削除
 sudo docker image rm localhost/miracron:latest
 sudo docker image rm localhost/miracron-samba:latest

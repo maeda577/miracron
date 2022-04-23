@@ -47,7 +47,7 @@ def _is_match_string(program, rule) -> bool:
     if rule['matchDescription'] and 'description' in program.keys():
         target_string.append(program['description'])
     if rule['matchExtended'] and 'extended' in program.keys():
-        target_string.append(program['extended'])
+        target_string.extend(program['extended'].values())
 
     if len(target_string) == 0:
         return False

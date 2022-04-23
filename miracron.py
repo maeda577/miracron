@@ -47,7 +47,7 @@ def _is_match_string(program, rule) -> bool:
     if rule['matchDescription'] and 'description' in program.keys():
         target_string.append(program['description'])
     if rule['matchExtended'] and 'extended' in program.keys():
-        target_string.append(program['extended'])
+        target_string.extend(program['extended'].values())
 
     if len(target_string) == 0:
         return False
@@ -60,9 +60,13 @@ def _is_match_string(program, rule) -> bool:
 
     if 'keywords' in rule.keys():
         for keyword in rule['keywords']:
+            has_keyword = False
             for str in target_string:
-                if keyword not in str:
-                    return False
+                if keyword in str:
+                    has_keyword = True
+                    break
+            if has_keyword == False:
+                return False
 
     return True
 

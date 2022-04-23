@@ -60,9 +60,13 @@ def _is_match_string(program, rule) -> bool:
 
     if 'keywords' in rule.keys():
         for keyword in rule['keywords']:
+            has_keyword = False
             for str in target_string:
-                if keyword not in str:
-                    return False
+                if keyword in str:
+                    has_keyword = True
+                    break
+            if has_keyword == False:
+                return False
 
     return True
 

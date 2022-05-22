@@ -24,7 +24,7 @@ mkdir ~/miracron
 cd ~/miracron
 # 設定サンプルのダウンロード
 curl --output config.yml https://raw.githubusercontent.com/maeda577/miracron/main/config-sample.yml
-curl --output docker-compose.yml https://raw.githubusercontent.com/maeda577/miracron/main/docker/docker-compose.yml
+curl --output docker-compose.yml https://raw.githubusercontent.com/maeda577/miracron/main/docker-compose.yml
 
 # 録画ルールの編集
 vi config.yml
@@ -34,12 +34,8 @@ vi docker-compose.yml
 # イメージのビルドとコンテナ起動
 sudo docker-compose up --detach
 
-# 録画スケジュールの即時更新
-sudo docker exec miracron miracron-update
-# 録画スケジュールの出力結果を確認
-sudo docker exec miracron miracron-show
-# 録画閲覧用の共有ディレクトリへアクセスする際のパスワード変更
-sudo docker exec -it miracron-samba pdbedit -a -u root
+# 録画スケジュール確認
+sudo docker exec miracron crontab -l
 ```
 
 ## 録画スケジュールの手動更新
@@ -53,7 +49,7 @@ vi config.yml
 # 録画スケジュールの即時更新
 sudo docker exec miracron miracron-update
 # 録画スケジュールの出力結果を確認
-sudo docker exec miracron miracron-show
+sudo docker exec miracron crontab -l
 ```
 
 ## 録画済データの閲覧方法

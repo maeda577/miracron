@@ -4,9 +4,9 @@ services:
   miracron:
     container_name: miracron
     build:
-      context: https://github.com/maeda577/miracron.git#${MIRACRON_TAG:-main}
+      context: ${MIRACRON_CONTEXT:-https://github.com/maeda577/miracron.git#main}
       dockerfile: Dockerfile.alpine
-    image: localhost/miracron:${MIRACRON_TAG:-latest}
+    image: localhost/miracron:latest
     volumes:
       - type: volume
         source: miracron_recorded
@@ -31,9 +31,9 @@ services:
   miracron-samba:
     container_name: miracron-samba
     build:
-      context: https://github.com/maeda577/miracron.git#${MIRACRON_TAG:-main}
+      context: ${MIRACRON_CONTEXT:-https://github.com/maeda577/miracron.git#main}
       dockerfile: Dockerfile.debian-samba
-    image: localhost/miracron-samba:${MIRACRON_TAG:-latest}
+    image: localhost/miracron-samba:latest
     volumes:
       - type: volume
         source: miracron_recorded

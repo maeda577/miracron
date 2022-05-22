@@ -47,7 +47,7 @@ cd ~/miracron
 # 録画ルールの編集
 vi config.yml
 # 録画スケジュールの即時更新
-sudo docker exec miracron miracron-update
+sudo docker exec miracron miracron-update.sh
 # 録画スケジュールの出力結果を確認
 sudo docker exec miracron crontab -l
 ```

@@ -6,9 +6,6 @@ services:
     build:
       context: https://github.com/maeda577/miracron.git#${MIRACRON_TAG:-main}
       dockerfile: Dockerfile.alpine
-      args:
-        # 録画スケジュールを再生成するスケジュール(デフォルト: 毎日の午前5時)
-        MIRACRON_UPDATE_SCHEDULE: "0 5 * * *"
     image: localhost/miracron:${MIRACRON_TAG:-latest}
     volumes:
       - type: volume
@@ -21,8 +18,10 @@ services:
     restart: unless-stopped
     environment:
       TZ: Asia/Tokyo
-      # ログを出力するレベル (CRITICAL, ERROR, WARNING, INFO, DEBUG のいずれか) (デフォルト: WARNING)
-      MIRACRON_LOG: WARNING
+      # 録画スケジュールを再生成するスケジュール(cron書式) (デフォルト: 毎日の午前5時)
+      MIRACRON_UPDATE_SCHEDULE: "0 5 * * *"
+      # ログを出力するレベル(CRITICAL, ERROR, WARNING, INFO, DEBUG のいずれか) (デフォルト: WARNING)
+      MIRACRON_LOG: INFO
       # コンフィグファイルのコンテナ内のパス(デフォルト: /etc/miracron/config.yml)
       MIRACRON_CONFIG: /etc/miracron/config.yml
     init: true
@@ -34,9 +33,6 @@ services:
     build:
       context: https://github.com/maeda577/miracron.git#${MIRACRON_TAG:-main}
       dockerfile: Dockerfile.debian-samba
-      args:
-        # sambaにSMBアクセスする際のrootユーザーのパスワード(デフォルト: P@ssw0rd!)
-        MIRACRON_SAMBA_PASSWORD: "P@ssw0rd!"
     image: localhost/miracron-samba:${MIRACRON_TAG:-latest}
     volumes:
       - type: volume
@@ -45,6 +41,8 @@ services:
     restart: unless-stopped
     environment:
       TZ: Asia/Tokyo
+      # sambaにSMBアクセスする際のrootユーザーのパスワード
+      MIRACRON_SAMBA_PASSWORD: "P@ssw0rd!"
       MIRACRON_RECORDED_DIRECTORY: /var/lib/miracron/recorded
     init: true
     logging:

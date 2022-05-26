@@ -8,10 +8,10 @@
             "name": "Python: Run miracron",
             "type": "python",
             "request": "launch",
-            "program": "miracron.py",
+            "program": "miracron/miracron.py",
             "args": [
                 "--config",
-                "./docker/config.yml"
+                "config.yml"
             ],
             "env": {
                 "MIRACRON_LOG": "INFO"

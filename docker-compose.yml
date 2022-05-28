@@ -24,6 +24,8 @@ services:
       MIRACRON_LOGLEVEL: INFO
       # コンフィグファイルのコンテナ内のパス(デフォルト: /etc/miracron/config.yml)
       MIRACRON_CONFIG: /etc/miracron/config.yml
+      # 閲覧用のcronルールを生成するパス(デフォルト: 生成しない)
+      MIRACRON_CRON_COPY: /var/lib/miracron/recorded/cron_schedule.txt
     init: true
     logging:
       driver: json-file  # お好みでjournaldに変更

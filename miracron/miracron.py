@@ -87,7 +87,7 @@ if __name__ == '__main__':
         '-l', '--loglevel',
         choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG'],
         default=os.getenv('MIRACRON_LOGLEVEL', 'WARNING'),
-        help='the threshold of logging level [env: MIRACRON_LOG] [default: WARNING]'
+        help='the threshold of logging level [env: MIRACRON_LOGLEVEL] [default: WARNING]'
     )
     parser.add_argument(
         '-L', '--logfile',

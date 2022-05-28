@@ -89,6 +89,12 @@ if __name__ == '__main__':
         default=os.getenv('MIRACRON_LOG', 'WARNING'),
         help='the threshold of logging level [env: MIRACRON_LOG] [default: WARNING]'
     )
+    parser.add_argument(
+        '-o', '--outfile',
+        metavar='<outfile>',
+        default=os.getenv('MIRACRON_OUTFILE'),
+        help='path to output cron rules [default: stdout]'
+    )
     args = parser.parse_args()
 
     # ログ設定
@@ -148,7 +154,8 @@ if __name__ == '__main__':
 
     margin_sec = datetime.timedelta(seconds = config['startMarginSec'])
     timezone = datetime.datetime.utcnow().astimezone().tzinfo
-    # cronルールの出力
+    cron_list = []
+    # cronルールの生成
     for program in match_programs:
         start_at = datetime.datetime.fromtimestamp(program['startAt']/1000, timezone)
         start_margin = start_at - margin_sec
@@ -173,8 +180,18 @@ if __name__ == '__main__':
         logger.debug(comment_str)
         logger.debug(cron_str)
         logger.debug('#####')
-        print(comment_str)
-        print(cron_str)
-        print('#####')
+        cron_list.append(comment_str)
+        cron_list.append(cron_str)
+        cron_list.append('#####')
+
+    # cronルールの書き込み
+    if args.outfile:
+        with open(args.outfile, mode='w', encoding='utf-8') as file:
+            for line in cron_list:
+                file.write(line)
+                file.write('\n')
+    else:
+        for line in cron_list:
+            print(line)
 
     logger.info(f"Miracron completed. Scheduled program count: {len(match_programs)}")

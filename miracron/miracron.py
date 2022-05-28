@@ -90,6 +90,12 @@ if __name__ == '__main__':
         help='the threshold of logging level [env: MIRACRON_LOG] [default: WARNING]'
     )
     parser.add_argument(
+        '-L', '--logfile',
+        metavar='<logfile>',
+        default=os.getenv('MIRACRON_LOGFILE'),
+        help='path to logfile [default: stdout and stderr]'
+    )
+    parser.add_argument(
         '-o', '--outfile',
         metavar='<outfile>',
         default=os.getenv('MIRACRON_OUTFILE'),
@@ -99,8 +105,18 @@ if __name__ == '__main__':
 
     # ログ設定
     logger = logging.getLogger('miracron')
-    logger.addHandler(logging.StreamHandler(stream = sys.stderr))
     logger.setLevel(args.loglevel.upper())
+    if args.logfile:
+        file_handler = logging.FileHandler(filename = args.logfile)
+        file_handler.setFormatter(logging.Formatter(fmt = '%(asctime)s [%(levelname)s] %(message)s'))
+        logger.addHandler(file_handler)
+    else:
+        stdout_handler = logging.StreamHandler(stream = sys.stdout)
+        stdout_handler.addFilter(lambda record: record.levelno <= logging.INFO)
+        logger.addHandler(stdout_handler)
+        stderr_handler = logging.StreamHandler(stream = sys.stderr)
+        stderr_handler.addFilter(lambda record: record.levelno > logging.INFO)
+        logger.addHandler(stderr_handler)
 
     logger.info('Start miracron.')
     logger.debug('Start loading configuration.')

@@ -21,9 +21,11 @@ services:
       # 録画スケジュールを再生成するスケジュール(cron書式) (デフォルト: 毎日の午前5時)
       MIRACRON_UPDATE_SCHEDULE: "0 5 * * *"
       # ログを出力するレベル(CRITICAL, ERROR, WARNING, INFO, DEBUG のいずれか) (デフォルト: WARNING)
-      MIRACRON_LOG: INFO
+      MIRACRON_LOGLEVEL: INFO
       # コンフィグファイルのコンテナ内のパス(デフォルト: /etc/miracron/config.yml)
       MIRACRON_CONFIG: /etc/miracron/config.yml
+      # 閲覧用のcronルールを生成するパス(デフォルト: 生成しない)
+      MIRACRON_CRON_COPY: /var/lib/miracron/recorded/cron_schedule.txt
     init: true
     logging:
       driver: json-file  # お好みでjournaldに変更

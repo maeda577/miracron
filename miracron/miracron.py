@@ -4,24 +4,23 @@ import json
 import logging
 import os
 import sys
+import typing
 import urllib.parse
 import urllib.request
 
 import yamale
 
-VERSION_STR = '0.1'
+VERSION_STR: typing.Final[str] = '0.1'
 
 # 番組名をそのままディレクトリ名にする時に適用する変換テーブル
-FILENAME_TRANS = str.maketrans(
-    {
-        '/': '_',
-        '\0': None,
-        '\r': None,
-        '\n': ' ',
-        '\'': '_',
-        '#': '_',
-    }
-)
+FILENAME_TRANS_MAP: dict[str, str] = {
+    '/': '_',
+    '\0': None,
+    '\r': None,
+    '\n': ' ',
+    '\'': '_',
+    '#': '_',
+}
 
 # 番組が検索条件にマッチするか
 def _is_match_config(program, config) -> bool:
@@ -157,7 +156,7 @@ if __name__ == '__main__':
     req = urllib.request.Request(programs_url)
     try:
         with urllib.request.urlopen(req) as res:
-            programs = json.load(res)
+            programs: list[any] = json.load(res)
     except Exception as e:
         logger.error('Failed to get programs')
         logger.exception(e)
@@ -170,6 +169,8 @@ if __name__ == '__main__':
 
     margin_sec = datetime.timedelta(seconds = config['startMarginSec'])
     timezone = datetime.datetime.utcnow().astimezone().tzinfo
+    translate_map = str.maketrans(FILENAME_TRANS_MAP)
+
     cron_list = []
     # cronルールの生成
     for program in match_programs:
@@ -179,7 +180,7 @@ if __name__ == '__main__':
         stream_url = urllib.parse.urljoin(config['mirakurunUrl'], f"api/programs/{program['id']}/stream")
 
         # 出力先などの準備
-        dir_name = start_at.strftime("%Y%m%d") + "_" + (program['name'].translate(FILENAME_TRANS) if 'name' in program.keys() else '')
+        dir_name = start_at.strftime("%Y%m%d") + "_" + (program['name'].translate(translate_map) if 'name' in program.keys() else '')
         dir_path = os.path.join(config['recordDirectory'], dir_name)
         stream_path = os.path.join(dir_path, str(program['id']) + '.m2ts')
         info_path = os.path.join(dir_path, str(program['id']) + '.json')

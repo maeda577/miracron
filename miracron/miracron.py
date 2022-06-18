@@ -63,17 +63,28 @@ class Program:
     extended: dict[str, str] = dataclasses.field(default_factory=dict[str, str])
     genres: list[Genre] = dataclasses.field(default_factory=list[Genre])
 
-def _cast_json(dict: dict[str, any]) -> any:
-    if 'un1' in dict:
-        return Genre(**dict)
-    if 'samplingRate' in dict:
-        return Audio(**dict)
-    if 'resolution' in dict:
-        return Video(**dict)
-    if 'name' in dict:
-        return Program(**dict)
+def get_programs(mirakurun_baseurl: str) -> list[Program]:
+    """
+    Get mirakurun programs. Exclude programs without name.
+    """
+    programs_url: str = urllib.parse.urljoin(mirakurun_baseurl, 'api/programs')
 
-    return dict
+    def _cast_json(dict: dict[str, any]) -> any:
+        if 'un1' in dict:
+            return Genre(**dict)
+        if 'samplingRate' in dict:
+            return Audio(**dict)
+        if 'resolution' in dict:
+            return Video(**dict)
+        if 'name' in dict:
+            return Program(**dict)
+        return dict
+
+    req: urllib.request.Request = urllib.request.Request(programs_url)
+    with urllib.request.urlopen(req) as res:
+        programs: list[Program] = json.load(res, object_hook=_cast_json)
+    # nameが入っていないものはProgramと判定されないのでここで落とされる
+    return list(filter(lambda p: type(p) == Program, programs))
 
 # 番組が検索条件にマッチするか
 def _is_match_config(program: Program, config) -> bool:
@@ -207,12 +218,8 @@ if __name__ == '__main__':
     logger.debug('Loading configuration is completed. Start getting the programs.')
 
     # 番組表の取得
-    programs_url: str = urllib.parse.urljoin(config['mirakurunUrl'], 'api/programs')
-    req: urllib.request.Request = urllib.request.Request(programs_url)
     try:
-        with urllib.request.urlopen(req) as res:
-            programs: list[Program] = json.load(res, object_hook=_cast_json)
-            filtered_programs = list(filter(lambda p: type(p) == Program, programs))
+        filtered_programs = get_programs(config['mirakurunUrl'])
     except Exception as e:
         logger.error('Failed to get programs')
         logger.exception(e)

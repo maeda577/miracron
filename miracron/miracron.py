@@ -1,4 +1,5 @@
 import argparse
+import collections.abc
 import dataclasses
 import datetime
 import json
@@ -202,16 +203,16 @@ def load_config(filepath: str) -> Config:
 
     return Config(**conf_yaml)
 
-# 番組が検索条件にマッチするか
-def _is_match_config(program: Program, config: Config) -> bool:
-    # 単発録画IDにマッチすれば他のルールを考慮せずTrue
-    if program.id in config.oneshots:
-        return True
-    # ルールの判定
-    for rule in config.rules:
-        if rule.is_match(program):
-            return True
-    return False
+# 検索条件にマッチする番組に絞り込み
+def filter_programs(programs: typing.Iterable[Program], rules: list[Rule], oneshots: list[int]) -> collections.abc.Generator[Program, None, None]:
+    for program in programs:
+        # 単発録画IDにマッチすれば他のルールを考慮せずreturn
+        if program.id in oneshots:
+            yield program
+        # ルールの判定
+        for rule in rules:
+            if rule.is_match(program):
+                yield program
 
 if __name__ == '__main__':
     # 引数パース
@@ -242,7 +243,7 @@ if __name__ == '__main__':
         sys.exit(1)
 
     # ルールにマッチするものに絞り込んで日付順に並び替え
-    match_programs: list[Program] = sorted(filter(lambda p:_is_match_config(p, config), programs), key=lambda p: p.startAt)
+    match_programs: list[Program] = sorted(filter_programs(programs, config.rules, config.oneshots), key=lambda p: p.startAt)
 
     logger.debug('Getting programs and filtering is completed. Start generating cron rules.')
 

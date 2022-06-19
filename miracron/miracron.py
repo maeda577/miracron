@@ -4,6 +4,7 @@ import datetime
 import json
 import logging
 import os
+import pathlib
 import sys
 import typing
 import urllib.parse
@@ -45,7 +46,7 @@ class Genre:
     un1: int
     un2: int
 
-# 番組情報
+# 番組情報 不正な型が入ってきても検索に引っかからないだけなのでdataclassを使う pydanticを使った結果落ちて録画失敗する方が辛い
 @dataclasses.dataclass(frozen=True)
 class Program:
     id: int
@@ -53,7 +54,7 @@ class Program:
     serviceId: int
     transportStreamId: int
     networkId: int
-    startAt: int
+    startAt: datetime.datetime
     duration: int
     isFree: bool
     name: str
@@ -72,19 +73,20 @@ class Rule(pydantic.BaseModel):
     matchDescription: bool = False
     matchExtended: bool = False
 
-# 設定
+# 設定 厳密に入力値を検証したいのでpydanticを使う
 class Config(pydantic.BaseModel):
-    mirakurunUrl: str
+    mirakurunUrl: pydantic.AnyHttpUrl
     recPriority: int = 2
     startMarginSec: int = 5
-    recordDirectory: str = '/var/lib/miracron/recorded'
+    recordDirectory: pathlib.Path = pathlib.Path('/var/lib/miracron/recorded')
+    timezoneDelta: datetime.timedelta = datetime.timedelta(hours=9)
     rules: list[Rule] = []
     oneshots: list[int] = []
 
 # 番組情報の読み込み
-def get_programs(mirakurun_baseurl: str) -> list[Program]:
+def get_programs(mirakurun_baseurl: str, timezone: datetime.tzinfo = datetime.timezone(datetime.timedelta(hours=9))) -> list[Program]:
     """
-    Get mirakurun programs. Exclude programs without name.
+    Get mirakurun programs. Exclude programs without name. Default timezone is +09:00.
     """
     programs_url: str = urllib.parse.urljoin(mirakurun_baseurl, 'api/programs')
 
@@ -96,7 +98,9 @@ def get_programs(mirakurun_baseurl: str) -> list[Program]:
         if 'resolution' in dict:
             return Video(**dict)
         if 'name' in dict:
-            return Program(**dict)
+            start_timestamp: int = typing.cast(int, dict.pop('startAt'))
+            start_at: datetime.datetime = datetime.datetime.fromtimestamp(start_timestamp / 1000, timezone)
+            return Program(**dict, startAt=start_at)
         return dict
 
     req: urllib.request.Request = urllib.request.Request(programs_url)
@@ -138,6 +142,23 @@ def get_argparse() -> argparse.ArgumentParser:
     )
     return parser
 
+# ロガーの取得
+def get_logger(loglevel: str, logpath: typing.Optional[str]) -> logging.Logger:
+    logger: logging.Logger = logging.getLogger('miracron')
+    logger.setLevel(loglevel.upper())
+    if logpath:
+        file_handler: logging.FileHandler = logging.FileHandler(filename = logpath)
+        file_handler.setFormatter(logging.Formatter(fmt = '%(asctime)s [%(levelname)s] %(message)s'))
+        logger.addHandler(file_handler)
+    else:
+        stdout_handler: logging.StreamHandler = logging.StreamHandler(stream = sys.stdout)
+        stdout_handler.addFilter(lambda record: record.levelno <= logging.INFO)
+        logger.addHandler(stdout_handler)
+        stderr_handler: logging.StreamHandler = logging.StreamHandler(stream = sys.stderr)
+        stderr_handler.addFilter(lambda record: record.levelno > logging.INFO)
+        logger.addHandler(stderr_handler)
+    return logger
+
 # configのyamlファイル読み込み
 def load_config(filepath: str) -> Config:
     """
@@ -147,13 +168,8 @@ def load_config(filepath: str) -> Config:
         conf_yaml: typing.Any = yaml.safe_load(file)
     if type(conf_yaml) != dict:
         raise ValueError('Invalid config file')
-    config: Config = Config(**conf_yaml)
 
-    url: urllib.parse.ParseResult = urllib.parse.urlparse(config.mirakurunUrl)
-    if not all([url.scheme, url.netloc]):
-        raise ValueError('Invalid URL format: mirakurunUrl')
-
-    return config
+    return Config(**conf_yaml)
 
 # 番組が検索条件にマッチするか
 def _is_match_config(program: Program, config: Config) -> bool:
@@ -234,7 +250,7 @@ if __name__ == '__main__':
 
     # 番組表の取得
     try:
-        filtered_programs: list[Program] = get_programs(config.mirakurunUrl)
+        filtered_programs: list[Program] = get_programs(config.mirakurunUrl, datetime.timezone(config.timezoneDelta))
     except Exception as e:
         logger.error('Failed to get programs')
         logger.exception(e)
@@ -246,26 +262,24 @@ if __name__ == '__main__':
     logger.debug('Getting programs and filtering is completed. Start generating cron rules.')
 
     margin_sec: datetime.timedelta = datetime.timedelta(seconds = config.startMarginSec)
-    timezone: typing.Optional[datetime.tzinfo] = datetime.datetime.utcnow().astimezone().tzinfo
     translate_map: dict[int, str] = str.maketrans(FILENAME_TRANS_MAP)
 
     cron_list: list[str] = []
     # cronルールの生成
     for program in match_programs:
-        start_at: datetime.datetime = datetime.datetime.fromtimestamp(program.startAt / 1000, timezone)
-        start_margin: datetime.datetime = start_at - margin_sec
+        start_margin: datetime.datetime = program.startAt - margin_sec
         info_url: str = urllib.parse.urljoin(config.mirakurunUrl, f"api/programs/{program.id}")
         stream_url: str = urllib.parse.urljoin(config.mirakurunUrl, f"api/programs/{program.id}/stream")
 
         # 出力先などの準備
-        dir_name: str = start_at.strftime("%Y%m%d") + "_" + (program.name.translate(translate_map) if program.name != None else '')
+        dir_name: str = program.startAt.strftime("%Y%m%d") + "_" + (program.name.translate(translate_map) if program.name != None else '')
         dir_path: str = os.path.join(config.recordDirectory, dir_name)
         stream_path: str = os.path.join(dir_path, str(program.id) + '.m2ts')
         info_path: str = os.path.join(dir_path, str(program.id) + '.json')
         log_path: str = os.path.join(dir_path, str(program.id) + '.log')
 
         # cron文字列
-        comment_str: str = f"# ID:{program.id} ServiceID: {program.serviceId} StartAt: {start_at} {dir_name}"
+        comment_str: str = f"# ID:{program.id} ServiceID: {program.serviceId} StartAt: {program.startAt} {dir_name}"
         cron_str: str = f"{start_margin.minute} {start_margin.hour} {start_margin.day} {start_margin.month} * " \
             f"sleep {start_margin.second} && " \
             f"mkdir -p '{dir_path}' && " \

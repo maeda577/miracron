@@ -9,6 +9,8 @@ recPriority: 2
 startMarginSec: 5
 # 録画ファイルを書き出すディレクトリ(デフォルト:/var/lib/miracron/recorded)
 recordDirectory: /var/lib/miracron/recorded
+# 番組の開始時間をパースする時のタイムゾーン(デフォルト:+09:00) (よほどの事が無ければいじる必要はない)
+timezoneDelta: '+09:00'
 
 # 録画ルール(複数指定可)
 rules:
@@ -18,7 +20,7 @@ rules:
       - ビギナーズ
     # 除外するキーワード(複数指定可)
     excludeKeywords:
-      - "[再]"
+      - '[再]'
     # 検索対象にするチャンネルのサービスID(複数指定可)
     serviceIds:
       - 1032

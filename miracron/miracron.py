@@ -9,15 +9,16 @@ import typing
 import urllib.parse
 import urllib.request
 
-import yamale
+import pydantic
+import yaml
 
 VERSION_STR: typing.Final[str] = '0.1'
 
 # 番組名をそのままディレクトリ名にする時に適用する変換テーブル
 FILENAME_TRANS_MAP: dict[str, str] = {
     '/': '_',
-    '\0': None,
-    '\r': None,
+    '\0': '',
+    '\r': '',
     '\n': ' ',
     '\'': '_',
     '#': '_',
@@ -58,18 +59,36 @@ class Program:
     name: str
     audio: Audio
     audios: list[Audio]
-    description: str = None
-    video: Video = None
+    video: typing.Optional[Video] = None
+    description: typing.Optional[str] = None
     extended: dict[str, str] = dataclasses.field(default_factory=dict[str, str])
     genres: list[Genre] = dataclasses.field(default_factory=list[Genre])
 
+class Rule(pydantic.BaseModel):
+    keywords: list[str] = []
+    excludeKeywords: list[str] = []
+    serviceIds: list[int] = []
+    matchName: bool = True
+    matchDescription: bool = False
+    matchExtended: bool = False
+
+# 設定
+class Config(pydantic.BaseModel):
+    mirakurunUrl: str
+    recPriority: int = 2
+    startMarginSec: int = 5
+    recordDirectory: str = '/var/lib/miracron/recorded'
+    rules: list[Rule] = []
+    oneshots: list[int] = []
+
+# 番組情報の読み込み
 def get_programs(mirakurun_baseurl: str) -> list[Program]:
     """
     Get mirakurun programs. Exclude programs without name.
     """
     programs_url: str = urllib.parse.urljoin(mirakurun_baseurl, 'api/programs')
 
-    def _cast_json(dict: dict[str, any]) -> any:
+    def _cast_json(dict: dict[str, typing.Any]) -> typing.Any:
         if 'un1' in dict:
             return Genre(**dict)
         if 'samplingRate' in dict:
@@ -86,30 +105,44 @@ def get_programs(mirakurun_baseurl: str) -> list[Program]:
     # nameが入っていないものはProgramと判定されないのでここで落とされる
     return list(filter(lambda p: type(p) == Program, programs))
 
+# configのyamlファイル読み込み
+def load_config(filepath: str) -> Config:
+    """
+    Load miracron config yaml.
+    """
+    with open(filepath) as file:
+        conf_yaml = yaml.safe_load(file)
+    config: Config = Config(**conf_yaml)
+
+    url = urllib.parse.urlparse(config.mirakurunUrl)
+    if not all([url.scheme, url.netloc]):
+        raise ValueError('Invalid URL format: mirakurunUrl')
+
+    return config
+
 # 番組が検索条件にマッチするか
-def _is_match_config(program: Program, config) -> bool:
+def _is_match_config(program: Program, config: Config) -> bool:
     # 単発録画IDにマッチすれば他のルールを考慮せずTrue
-    if 'oneshots' in config.keys() and program.id in config['oneshots']:
+    if program.id in config.oneshots:
         return True
     # ルールの判定
-    if 'rules' in config.keys():
-        for rule in config['rules']:
-            # サービスIDが指定されていれば判定
-            if 'serviceIds' in rule.keys() and (program.serviceId not in rule['serviceIds']):
-                continue
-            # 文字列系の判定
-            if ('keywords' in rule.keys() or 'excludeKeywords' in rule.keys()) and _is_match_string(program, rule):
-                return True
+    for rule in config.rules:
+        # サービスIDが指定されていれば判定
+        if len(rule.serviceIds) != 0 and program.serviceId not in rule.serviceIds:
+            continue
+        # 文字列系の判定
+        if (len(rule.keywords) != 0 or len(rule.excludeKeywords) != 0) and _is_match_string(program, rule):
+            return True
     return False
 
 # 番組が検索条件にマッチするか（文字列関連のみ）
-def _is_match_string(program: Program, rule) -> bool:
+def _is_match_string(program: Program, rule: Rule) -> bool:
     target_string: list[str] = []
-    if rule['matchName']:
+    if rule.matchName:
         target_string.append(program.name)
-    if rule['matchDescription']:
+    if rule.matchDescription and program.description:
         target_string.append(program.description)
-    if rule['matchExtended']:
+    if rule.matchExtended:
         target_string.extend(program.extended.keys())
         target_string.extend(program.extended.values())
 
@@ -117,21 +150,19 @@ def _is_match_string(program: Program, rule) -> bool:
     if len(target_string) == 0:
         return False
 
-    if 'excludeKeywords' in rule.keys():
-        for exclude_keyword in rule['excludeKeywords']:
-            for string in target_string:
-                if exclude_keyword in string:
-                    return False
-
-    if 'keywords' in rule.keys():
-        for keyword in rule['keywords']:
-            has_keyword = False
-            for string in target_string:
-                if keyword in string:
-                    has_keyword = True
-                    break
-            if has_keyword == False:
+    for exclude_keyword in rule.excludeKeywords:
+        for string in target_string:
+            if exclude_keyword in string:
                 return False
+
+    for keyword in rule.keywords:
+        has_keyword = False
+        for string in target_string:
+            if keyword in string:
+                has_keyword = True
+                break
+        if has_keyword == False:
+            return False
 
     return True
 
@@ -188,38 +219,17 @@ if __name__ == '__main__':
 
     # configファイルの事前検証
     try:
-        schema = yamale.make_schema(os.path.join(os.path.dirname(__file__), 'schema.yml'))
-        data = yamale.make_data(args.config)
-        yamale.validate(schema, data)
+        config: Config = load_config(args.config)
     except Exception as e:
         logger.error('Failed to parse configuration.')
         logger.exception(e)
         sys.exit(1)
 
-    # config読み取り
-    config = data[0][0]
-
-    # デフォルト値の設定
-    if 'recPriority' not in config.keys():
-        config['recPriority'] = 2
-    if 'startMarginSec' not in config.keys():
-        config['startMarginSec'] = 5
-    if 'recordDirectory' not in config.keys():
-        config['recordDirectory'] = '/var/lib/miracron/recorded'
-    if 'rules' in config.keys():
-        for rule in config['rules']:
-            if 'matchName' not in rule.keys():
-                rule['matchName'] = True
-            if 'matchDescription' not in rule.keys():
-                rule['matchDescription'] = False
-            if 'matchExtended' not in rule.keys():
-                rule['matchExtended'] = False
-
     logger.debug('Loading configuration is completed. Start getting the programs.')
 
     # 番組表の取得
     try:
-        filtered_programs = get_programs(config['mirakurunUrl'])
+        filtered_programs = get_programs(config.mirakurunUrl)
     except Exception as e:
         logger.error('Failed to get programs')
         logger.exception(e)
@@ -230,7 +240,7 @@ if __name__ == '__main__':
 
     logger.debug('Getting programs and filtering is completed. Start generating cron rules.')
 
-    margin_sec = datetime.timedelta(seconds = config['startMarginSec'])
+    margin_sec = datetime.timedelta(seconds = config.startMarginSec)
     timezone = datetime.datetime.utcnow().astimezone().tzinfo
     translate_map = str.maketrans(FILENAME_TRANS_MAP)
 
@@ -239,12 +249,12 @@ if __name__ == '__main__':
     for program in match_programs:
         start_at = datetime.datetime.fromtimestamp(program.startAt / 1000, timezone)
         start_margin = start_at - margin_sec
-        info_url = urllib.parse.urljoin(config['mirakurunUrl'], f"api/programs/{program.id}")
-        stream_url = urllib.parse.urljoin(config['mirakurunUrl'], f"api/programs/{program.id}/stream")
+        info_url = urllib.parse.urljoin(config.mirakurunUrl, f"api/programs/{program.id}")
+        stream_url = urllib.parse.urljoin(config.mirakurunUrl, f"api/programs/{program.id}/stream")
 
         # 出力先などの準備
         dir_name = start_at.strftime("%Y%m%d") + "_" + (program.name.translate(translate_map) if program.name != None else '')
-        dir_path = os.path.join(config['recordDirectory'], dir_name)
+        dir_path = os.path.join(config.recordDirectory, dir_name)
         stream_path = os.path.join(dir_path, str(program.id) + '.m2ts')
         info_path = os.path.join(dir_path, str(program.id) + '.json')
         log_path = os.path.join(dir_path, str(program.id) + '.log')
@@ -254,7 +264,7 @@ if __name__ == '__main__':
         cron_str = f"{start_margin.minute} {start_margin.hour} {start_margin.day} {start_margin.month} * " \
             f"sleep {start_margin.second} && " \
             f"mkdir -p '{dir_path}' && " \
-            f"wget -o '{log_path}' -O '{stream_path}' --header 'X-Mirakurun-Priority: {config['recPriority']}' {stream_url} && " \
+            f"wget -o '{log_path}' -O '{stream_path}' --header 'X-Mirakurun-Priority: {config.recPriority}' {stream_url} && " \
             f"wget -q -O '{info_path}' {info_url}"
 
         logger.debug(comment_str)

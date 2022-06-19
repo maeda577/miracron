@@ -111,7 +111,9 @@ def load_config(filepath: str) -> Config:
     Load miracron config yaml.
     """
     with open(filepath) as file:
-        conf_yaml = yaml.safe_load(file)
+        conf_yaml: typing.Any = yaml.safe_load(file)
+    if type(conf_yaml) != dict:
+        raise ValueError('Invalid config file')
     config: Config = Config(**conf_yaml)
 
     url = urllib.parse.urlparse(config.mirakurunUrl)
@@ -146,7 +148,6 @@ def _is_match_string(program: Program, rule: Rule) -> bool:
         target_string.extend(program.extended.keys())
         target_string.extend(program.extended.values())
 
-    target_string = list(filter(lambda s: s != None, target_string))
     if len(target_string) == 0:
         return False
 
@@ -156,7 +157,7 @@ def _is_match_string(program: Program, rule: Rule) -> bool:
                 return False
 
     for keyword in rule.keywords:
-        has_keyword = False
+        has_keyword: bool = False
         for string in target_string:
             if keyword in string:
                 has_keyword = True
@@ -203,14 +204,14 @@ if __name__ == '__main__':
     logger = logging.getLogger('miracron')
     logger.setLevel(args.loglevel.upper())
     if args.logfile:
-        file_handler = logging.FileHandler(filename = args.logfile)
+        file_handler: logging.FileHandler = logging.FileHandler(filename = args.logfile)
         file_handler.setFormatter(logging.Formatter(fmt = '%(asctime)s [%(levelname)s] %(message)s'))
         logger.addHandler(file_handler)
     else:
-        stdout_handler = logging.StreamHandler(stream = sys.stdout)
+        stdout_handler: logging.StreamHandler = logging.StreamHandler(stream = sys.stdout)
         stdout_handler.addFilter(lambda record: record.levelno <= logging.INFO)
         logger.addHandler(stdout_handler)
-        stderr_handler = logging.StreamHandler(stream = sys.stderr)
+        stderr_handler: logging.StreamHandler = logging.StreamHandler(stream = sys.stderr)
         stderr_handler.addFilter(lambda record: record.levelno > logging.INFO)
         logger.addHandler(stderr_handler)
 
@@ -229,39 +230,39 @@ if __name__ == '__main__':
 
     # 番組表の取得
     try:
-        filtered_programs = get_programs(config.mirakurunUrl)
+        filtered_programs: list[Program] = get_programs(config.mirakurunUrl)
     except Exception as e:
         logger.error('Failed to get programs')
         logger.exception(e)
         sys.exit(1)
 
     # ルールにマッチするものに絞り込んで日付順に並び替え
-    match_programs = sorted(filter(lambda p:_is_match_config(p, config), filtered_programs), key=lambda p: p.startAt)
+    match_programs: list[Program] = sorted(filter(lambda p:_is_match_config(p, config), filtered_programs), key=lambda p: p.startAt)
 
     logger.debug('Getting programs and filtering is completed. Start generating cron rules.')
 
-    margin_sec = datetime.timedelta(seconds = config.startMarginSec)
-    timezone = datetime.datetime.utcnow().astimezone().tzinfo
-    translate_map = str.maketrans(FILENAME_TRANS_MAP)
+    margin_sec: datetime.timedelta = datetime.timedelta(seconds = config.startMarginSec)
+    timezone: typing.Optional[datetime.tzinfo] = datetime.datetime.utcnow().astimezone().tzinfo
+    translate_map: dict[int, str] = str.maketrans(FILENAME_TRANS_MAP)
 
-    cron_list = []
+    cron_list: list[str] = []
     # cronルールの生成
     for program in match_programs:
-        start_at = datetime.datetime.fromtimestamp(program.startAt / 1000, timezone)
-        start_margin = start_at - margin_sec
-        info_url = urllib.parse.urljoin(config.mirakurunUrl, f"api/programs/{program.id}")
-        stream_url = urllib.parse.urljoin(config.mirakurunUrl, f"api/programs/{program.id}/stream")
+        start_at: datetime.datetime = datetime.datetime.fromtimestamp(program.startAt / 1000, timezone)
+        start_margin: datetime.datetime = start_at - margin_sec
+        info_url: str = urllib.parse.urljoin(config.mirakurunUrl, f"api/programs/{program.id}")
+        stream_url: str = urllib.parse.urljoin(config.mirakurunUrl, f"api/programs/{program.id}/stream")
 
         # 出力先などの準備
-        dir_name = start_at.strftime("%Y%m%d") + "_" + (program.name.translate(translate_map) if program.name != None else '')
-        dir_path = os.path.join(config.recordDirectory, dir_name)
-        stream_path = os.path.join(dir_path, str(program.id) + '.m2ts')
-        info_path = os.path.join(dir_path, str(program.id) + '.json')
-        log_path = os.path.join(dir_path, str(program.id) + '.log')
+        dir_name: str = start_at.strftime("%Y%m%d") + "_" + (program.name.translate(translate_map) if program.name != None else '')
+        dir_path: str = os.path.join(config.recordDirectory, dir_name)
+        stream_path: str = os.path.join(dir_path, str(program.id) + '.m2ts')
+        info_path: str = os.path.join(dir_path, str(program.id) + '.json')
+        log_path: str = os.path.join(dir_path, str(program.id) + '.log')
 
         # cron文字列
-        comment_str = f"# ID:{program.id} ServiceID: {program.serviceId} StartAt: {start_at} {dir_name}"
-        cron_str = f"{start_margin.minute} {start_margin.hour} {start_margin.day} {start_margin.month} * " \
+        comment_str: str = f"# ID:{program.id} ServiceID: {program.serviceId} StartAt: {start_at} {dir_name}"
+        cron_str: str = f"{start_margin.minute} {start_margin.hour} {start_margin.day} {start_margin.month} * " \
             f"sleep {start_margin.second} && " \
             f"mkdir -p '{dir_path}' && " \
             f"wget -o '{log_path}' -O '{stream_path}' --header 'X-Mirakurun-Priority: {config.recPriority}' {stream_url} && " \

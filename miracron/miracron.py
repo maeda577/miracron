@@ -73,6 +73,37 @@ class Rule(pydantic.BaseModel):
     matchDescription: bool = False
     matchExtended: bool = False
 
+    def is_match(self, program: Program) -> bool:
+        # サービスIDが指定されていれば判定
+        if len(self.serviceIds) != 0 and program.serviceId not in self.serviceIds:
+            return False
+
+        # 探す対象文字列
+        target_string: list[str] = []
+        if self.matchName:
+            target_string.append(program.name)
+        if self.matchDescription and program.description:
+            target_string.append(program.description)
+        if self.matchExtended:
+            target_string.extend(program.extended.keys())
+            target_string.extend(program.extended.values())
+
+        # 探す対象文字列がそもそも無ければFalse
+        if len(target_string) == 0:
+            return False
+
+        # 除外キーワードが対象のどこかに1度でも出たらFalse
+        for exclude_keyword in self.excludeKeywords:
+            if any((exclude_keyword in string) for string in target_string):
+                return False
+
+        # 対象キーワードが対象のどこにも出てこなかったらFalse (対象キーワードはAND検索する)
+        for keyword in self.keywords:
+            if not any((keyword in string) for string in target_string):
+                return False
+        # 全て通過すればTrue
+        return True
+
 # 設定 厳密に入力値を検証したいのでpydanticを使う
 class Config(pydantic.BaseModel):
     mirakurunUrl: pydantic.AnyHttpUrl
@@ -178,43 +209,9 @@ def _is_match_config(program: Program, config: Config) -> bool:
         return True
     # ルールの判定
     for rule in config.rules:
-        # サービスIDが指定されていれば判定
-        if len(rule.serviceIds) != 0 and program.serviceId not in rule.serviceIds:
-            continue
-        # 文字列系の判定
-        if (len(rule.keywords) != 0 or len(rule.excludeKeywords) != 0) and _is_match_string(program, rule):
+        if rule.is_match(program):
             return True
     return False
-
-# 番組が検索条件にマッチするか（文字列関連のみ）
-def _is_match_string(program: Program, rule: Rule) -> bool:
-    target_string: list[str] = []
-    if rule.matchName:
-        target_string.append(program.name)
-    if rule.matchDescription and program.description:
-        target_string.append(program.description)
-    if rule.matchExtended:
-        target_string.extend(program.extended.keys())
-        target_string.extend(program.extended.values())
-
-    if len(target_string) == 0:
-        return False
-
-    for exclude_keyword in rule.excludeKeywords:
-        for string in target_string:
-            if exclude_keyword in string:
-                return False
-
-    for keyword in rule.keywords:
-        has_keyword: bool = False
-        for string in target_string:
-            if keyword in string:
-                has_keyword = True
-                break
-        if has_keyword == False:
-            return False
-
-    return True
 
 if __name__ == '__main__':
     # 引数パース
@@ -238,14 +235,14 @@ if __name__ == '__main__':
 
     # 番組表の取得
     try:
-        filtered_programs: list[Program] = get_programs(config.mirakurunUrl, datetime.timezone(config.timezoneDelta))
+        programs: list[Program] = get_programs(config.mirakurunUrl, datetime.timezone(config.timezoneDelta))
     except Exception as e:
         logger.error('Failed to get programs')
         logger.exception(e)
         sys.exit(1)
 
     # ルールにマッチするものに絞り込んで日付順に並び替え
-    match_programs: list[Program] = sorted(filter(lambda p:_is_match_config(p, config), filtered_programs), key=lambda p: p.startAt)
+    match_programs: list[Program] = sorted(filter(lambda p:_is_match_config(p, config), programs), key=lambda p: p.startAt)
 
     logger.debug('Getting programs and filtering is completed. Start generating cron rules.')
 

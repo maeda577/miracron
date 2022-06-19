@@ -105,6 +105,39 @@ def get_programs(mirakurun_baseurl: str) -> list[Program]:
     # nameが入っていないものはProgramと判定されないのでここで落とされる
     return list(filter(lambda p: type(p) == Program, programs))
 
+# 引数のパーサ
+def get_argparse() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description='A cron rule generator for scheduled TV recording',
+        exit_on_error=True,
+    )
+    parser.add_argument('-V', '--version', action='version', version=f'%(prog)s {VERSION_STR}')
+    parser.add_argument(
+        '-c', '--config',
+        metavar='<config>',
+        default=os.getenv('MIRACRON_CONFIG', '/etc/miracron/config.yml'),
+        help='path to a configuration file [env: MIRACRON_CONFIG] [default: /etc/miracron/config.yml]'
+    )
+    parser.add_argument(
+        '-l', '--loglevel',
+        choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG'],
+        default=os.getenv('MIRACRON_LOGLEVEL', 'WARNING'),
+        help='the threshold of logging level [env: MIRACRON_LOGLEVEL] [default: WARNING]'
+    )
+    parser.add_argument(
+        '-L', '--logfile',
+        metavar='<logfile>',
+        default=os.getenv('MIRACRON_LOGFILE'),
+        help='path to logfile [default: stdout and stderr]'
+    )
+    parser.add_argument(
+        '-o', '--outfile',
+        metavar='<outfile>',
+        default=os.getenv('MIRACRON_OUTFILE'),
+        help='path to output cron rules [default: stdout]'
+    )
+    return parser
+
 # configのyamlファイル読み込み
 def load_config(filepath: str) -> Config:
     """
@@ -116,7 +149,7 @@ def load_config(filepath: str) -> Config:
         raise ValueError('Invalid config file')
     config: Config = Config(**conf_yaml)
 
-    url = urllib.parse.urlparse(config.mirakurunUrl)
+    url: urllib.parse.ParseResult = urllib.parse.urlparse(config.mirakurunUrl)
     if not all([url.scheme, url.netloc]):
         raise ValueError('Invalid URL format: mirakurunUrl')
 
@@ -169,39 +202,10 @@ def _is_match_string(program: Program, rule: Rule) -> bool:
 
 if __name__ == '__main__':
     # 引数パース
-    parser = argparse.ArgumentParser(
-        description='A cron rule generator for scheduled TV recording',
-        exit_on_error=True,
-    )
-    parser.add_argument('-V', '--version', action='version', version=f'%(prog)s {VERSION_STR}')
-    parser.add_argument(
-        '-c', '--config',
-        metavar='<config>',
-        default=os.getenv('MIRACRON_CONFIG', '/etc/miracron/config.yml'),
-        help='path to a configuration file [env: MIRACRON_CONFIG] [default: /etc/miracron/config.yml]'
-    )
-    parser.add_argument(
-        '-l', '--loglevel',
-        choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG'],
-        default=os.getenv('MIRACRON_LOGLEVEL', 'WARNING'),
-        help='the threshold of logging level [env: MIRACRON_LOGLEVEL] [default: WARNING]'
-    )
-    parser.add_argument(
-        '-L', '--logfile',
-        metavar='<logfile>',
-        default=os.getenv('MIRACRON_LOGFILE'),
-        help='path to logfile [default: stdout and stderr]'
-    )
-    parser.add_argument(
-        '-o', '--outfile',
-        metavar='<outfile>',
-        default=os.getenv('MIRACRON_OUTFILE'),
-        help='path to output cron rules [default: stdout]'
-    )
-    args = parser.parse_args()
+    args: argparse.Namespace = get_argparse().parse_args()
 
     # ログ設定
-    logger = logging.getLogger('miracron')
+    logger: logging.Logger = logging.getLogger('miracron')
     logger.setLevel(args.loglevel.upper())
     if args.logfile:
         file_handler: logging.FileHandler = logging.FileHandler(filename = args.logfile)

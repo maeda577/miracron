@@ -221,19 +221,7 @@ if __name__ == '__main__':
     args: argparse.Namespace = get_argparse().parse_args()
 
     # ログ設定
-    logger: logging.Logger = logging.getLogger('miracron')
-    logger.setLevel(args.loglevel.upper())
-    if args.logfile:
-        file_handler: logging.FileHandler = logging.FileHandler(filename = args.logfile)
-        file_handler.setFormatter(logging.Formatter(fmt = '%(asctime)s [%(levelname)s] %(message)s'))
-        logger.addHandler(file_handler)
-    else:
-        stdout_handler: logging.StreamHandler = logging.StreamHandler(stream = sys.stdout)
-        stdout_handler.addFilter(lambda record: record.levelno <= logging.INFO)
-        logger.addHandler(stdout_handler)
-        stderr_handler: logging.StreamHandler = logging.StreamHandler(stream = sys.stderr)
-        stderr_handler.addFilter(lambda record: record.levelno > logging.INFO)
-        logger.addHandler(stderr_handler)
+    logger: logging.Logger = get_logger(args.loglevel, args.logfile)
 
     logger.info('Start miracron.')
     logger.debug('Start loading configuration.')

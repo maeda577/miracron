@@ -109,13 +109,16 @@ class Rule(pydantic.BaseModel, extra=pydantic.Extra.forbid):
         # 全て通過すればTrue
         return True
 
-# 設定 厳密に入力値を検証したいのでpydanticを使う
-class Config(pydantic.BaseModel, extra=pydantic.Extra.forbid):
-    mirakurunUrl: pydantic.AnyHttpUrl
+class CronConfig(pydantic.BaseModel, extra=pydantic.Extra.forbid):
     recPriority: int = 2
     startMarginSec: int = 5
     recordDirectory: pathlib.Path = pathlib.Path('/var/lib/miracron/recorded')
+
+# 設定 厳密に入力値を検証したいのでpydanticを使う
+class Config(pydantic.BaseModel, extra=pydantic.Extra.forbid):
+    mirakurunUrl: pydantic.AnyHttpUrl
     timezoneDelta: datetime.timedelta = datetime.timedelta(hours=9)
+    cron: CronConfig = CronConfig()
     rules: list[Rule] = []
     oneshots: list[int] = []
 
@@ -251,7 +254,7 @@ if __name__ == '__main__':
 
     logger.debug('Getting programs and filtering is completed. Start generating cron rules.')
 
-    margin_sec: datetime.timedelta = datetime.timedelta(seconds = config.startMarginSec)
+    margin_sec: datetime.timedelta = datetime.timedelta(seconds = config.cron.startMarginSec)
     translate_map: dict[int, str] = str.maketrans(FILENAME_TRANS_MAP)
 
     cron_list: list[str] = []
@@ -263,7 +266,7 @@ if __name__ == '__main__':
 
         # 出力先などの準備
         dir_name: str = program.startAt.strftime("%Y%m%d") + "_" + (program.name.translate(translate_map) if program.name != None else '')
-        dir_path: str = os.path.join(config.recordDirectory, dir_name)
+        dir_path: str = os.path.join(config.cron.recordDirectory, dir_name)
         stream_path: str = os.path.join(dir_path, str(program.id) + '.m2ts')
         info_path: str = os.path.join(dir_path, str(program.id) + '.json')
         log_path: str = os.path.join(dir_path, str(program.id) + '.log')
@@ -273,7 +276,7 @@ if __name__ == '__main__':
         cron_str: str = f"{start_margin.minute} {start_margin.hour} {start_margin.day} {start_margin.month} * " \
             f"sleep {start_margin.second} && " \
             f"mkdir -p '{dir_path}' && " \
-            f"wget -o '{log_path}' -O '{stream_path}' --header 'X-Mirakurun-Priority: {config.recPriority}' {stream_url} && " \
+            f"wget -o '{log_path}' -O '{stream_path}' --header 'X-Mirakurun-Priority: {config.cron.recPriority}' {stream_url} && " \
             f"wget -q -O '{info_path}' {info_url}"
 
         logger.debug(comment_str)

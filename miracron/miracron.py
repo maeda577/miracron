@@ -221,6 +221,29 @@ def filter_programs(programs: typing.Iterable[Program], rules: list[Rule], onesh
             if rule.is_match(program):
                 yield program
 
+def to_cron_commentstr(program: Program) -> str:
+    return f"# ID:{program.id} ServiceID: {program.serviceId} StartAt: {program.startAt}"
+
+def to_cron_str(program: Program, cronConfig: CronConfig, mirakurunUrl: str) -> str:
+    start_margin: datetime.datetime = program.startAt - datetime.timedelta(seconds = cronConfig.startMarginSec)
+    info_url: str = urllib.parse.urljoin(mirakurunUrl, f"api/programs/{program.id}")
+    stream_url: str = urllib.parse.urljoin(mirakurunUrl, f"api/programs/{program.id}/stream")
+
+    # 出力先などの準備
+    translate_map: dict[int, str] = str.maketrans(FILENAME_TRANS_MAP)
+    dir_name: str = program.startAt.strftime("%Y%m%d") + "_" + program.name.translate(translate_map)
+    dir_path: str = os.path.join(cronConfig.recordDirectory, dir_name)
+    stream_path: str = os.path.join(dir_path, str(program.id) + '.m2ts')
+    info_path: str = os.path.join(dir_path, str(program.id) + '.json')
+    log_path: str = os.path.join(dir_path, str(program.id) + '.log')
+
+    # cron文字列
+    return f"{start_margin.minute} {start_margin.hour} {start_margin.day} {start_margin.month} * " \
+        f"sleep {start_margin.second} && " \
+        f"mkdir -p '{dir_path}' && " \
+        f"wget -o '{log_path}' -O '{stream_path}' --header 'X-Mirakurun-Priority: {cronConfig.recPriority}' {stream_url} && " \
+        f"wget -q -O '{info_path}' {info_url}"
+
 if __name__ == '__main__':
     # 引数パース
     args: argparse.Namespace = get_argparse().parse_args()
@@ -254,46 +277,17 @@ if __name__ == '__main__':
 
     logger.debug('Getting programs and filtering is completed. Start generating cron rules.')
 
-    margin_sec: datetime.timedelta = datetime.timedelta(seconds = config.cron.startMarginSec)
-    translate_map: dict[int, str] = str.maketrans(FILENAME_TRANS_MAP)
-
-    cron_list: list[str] = []
-    # cronルールの生成
-    for program in match_programs:
-        start_margin: datetime.datetime = program.startAt - margin_sec
-        info_url: str = urllib.parse.urljoin(config.mirakurunUrl, f"api/programs/{program.id}")
-        stream_url: str = urllib.parse.urljoin(config.mirakurunUrl, f"api/programs/{program.id}/stream")
-
-        # 出力先などの準備
-        dir_name: str = program.startAt.strftime("%Y%m%d") + "_" + (program.name.translate(translate_map) if program.name != None else '')
-        dir_path: str = os.path.join(config.cron.recordDirectory, dir_name)
-        stream_path: str = os.path.join(dir_path, str(program.id) + '.m2ts')
-        info_path: str = os.path.join(dir_path, str(program.id) + '.json')
-        log_path: str = os.path.join(dir_path, str(program.id) + '.log')
-
-        # cron文字列
-        comment_str: str = f"# ID:{program.id} ServiceID: {program.serviceId} StartAt: {program.startAt} {dir_name}"
-        cron_str: str = f"{start_margin.minute} {start_margin.hour} {start_margin.day} {start_margin.month} * " \
-            f"sleep {start_margin.second} && " \
-            f"mkdir -p '{dir_path}' && " \
-            f"wget -o '{log_path}' -O '{stream_path}' --header 'X-Mirakurun-Priority: {config.cron.recPriority}' {stream_url} && " \
-            f"wget -q -O '{info_path}' {info_url}"
-
-        logger.debug(comment_str)
-        logger.debug(cron_str)
-        logger.debug('#####')
-        cron_list.append(comment_str)
-        cron_list.append(cron_str)
-        cron_list.append('#####')
-
     # cronルールの書き込み
     if args.outfile:
         with open(args.outfile, mode='w', encoding='utf-8') as file:
-            for line in cron_list:
-                file.write(line)
-                file.write('\n')
+            for program in match_programs:
+                file.write(to_cron_commentstr(program))
+                file.write(to_cron_str(program, config.cron, config.mirakurunUrl))
+                file.write('#####')
     else:
-        for line in cron_list:
-            print(line)
+        for program in match_programs:
+            print(to_cron_commentstr(program))
+            print(to_cron_str(program, config.cron, config.mirakurunUrl))
+            print('#####')
 
     logger.info(f"Miracron completed. Scheduled program count: {len(match_programs)}")

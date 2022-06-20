@@ -70,6 +70,7 @@ class Rule(pydantic.BaseModel, extra=pydantic.Extra.forbid):
     keywords: list[str] = []
     excludeKeywords: list[str] = []
     serviceIds: list[int] = []
+    weekdays: list[int] = []
     matchName: bool = True
     matchDescription: bool = False
     matchExtended: bool = False
@@ -77,6 +78,9 @@ class Rule(pydantic.BaseModel, extra=pydantic.Extra.forbid):
     def is_match(self, program: Program) -> bool:
         # サービスIDが指定されていれば判定
         if len(self.serviceIds) != 0 and program.serviceId not in self.serviceIds:
+            return False
+        # 曜日が指定されていれば判定
+        if len(self.weekdays) != 0 and program.startAt.weekday() not in self.weekdays:
             return False
 
         # 探す対象文字列

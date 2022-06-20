@@ -66,7 +66,7 @@ class Program:
     extended: dict[str, str] = dataclasses.field(default_factory=dict[str, str])
     genres: list[Genre] = dataclasses.field(default_factory=list[Genre])
 
-class Rule(pydantic.BaseModel):
+class Rule(pydantic.BaseModel, extra=pydantic.Extra.forbid):
     keywords: list[str] = []
     excludeKeywords: list[str] = []
     serviceIds: list[int] = []
@@ -106,7 +106,7 @@ class Rule(pydantic.BaseModel):
         return True
 
 # 設定 厳密に入力値を検証したいのでpydanticを使う
-class Config(pydantic.BaseModel):
+class Config(pydantic.BaseModel, extra=pydantic.Extra.forbid):
     mirakurunUrl: pydantic.AnyHttpUrl
     recPriority: int = 2
     startMarginSec: int = 5

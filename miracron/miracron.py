@@ -244,7 +244,7 @@ def to_cron_str(program: Program, cronConfig: CronConfig, mirakurun_baseurl: str
         f"wget -o '{log_path}' -O '{stream_path}' --header 'X-Mirakurun-Priority: {cronConfig.recPriority}' {stream_url} && " \
         f"wget -q -O '{info_path}' {info_url}"
 
-if __name__ == '__main__':
+def start_miracron_cli():
     # 引数パース
     args: argparse.Namespace = get_argparse().parse_args()
 
@@ -291,3 +291,6 @@ if __name__ == '__main__':
             print('#####')
 
     logger.info(f"Miracron completed. Scheduled program count: {len(match_programs)}")
+
+if __name__ == '__main__':
+    start_miracron_cli()

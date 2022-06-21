@@ -224,10 +224,10 @@ def filter_programs(programs: typing.Iterable[Program], rules: list[Rule], onesh
 def to_cron_commentstr(program: Program) -> str:
     return f"# ID:{program.id} ServiceID: {program.serviceId} StartAt: {program.startAt}"
 
-def to_cron_str(program: Program, cronConfig: CronConfig, mirakurunUrl: str) -> str:
+def to_cron_str(program: Program, cronConfig: CronConfig, mirakurun_baseurl: str) -> str:
     start_margin: datetime.datetime = program.startAt - datetime.timedelta(seconds = cronConfig.startMarginSec)
-    info_url: str = urllib.parse.urljoin(mirakurunUrl, f"api/programs/{program.id}")
-    stream_url: str = urllib.parse.urljoin(mirakurunUrl, f"api/programs/{program.id}/stream")
+    info_url: str = urllib.parse.urljoin(mirakurun_baseurl, f"api/programs/{program.id}")
+    stream_url: str = urllib.parse.urljoin(mirakurun_baseurl, f"api/programs/{program.id}/stream")
 
     # 出力先などの準備
     translate_map: dict[int, str] = str.maketrans(FILENAME_TRANS_MAP)

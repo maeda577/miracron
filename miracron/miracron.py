@@ -14,7 +14,7 @@ import urllib.request
 import pydantic
 import yaml
 
-VERSION_STR: typing.Final[str] = '0.1'
+__version__: typing.Final[str] = '0.2'
 
 # 番組名をそのままディレクトリ名にする時に適用する変換テーブル
 FILENAME_TRANS_MAP: dict[str, str] = {
@@ -154,7 +154,7 @@ def get_argparse() -> argparse.ArgumentParser:
         description='A cron rule generator for scheduled TV recording',
         exit_on_error=True,
     )
-    parser.add_argument('-V', '--version', action='version', version=f'%(prog)s {VERSION_STR}')
+    parser.add_argument('-V', '--version', action='version', version=f'%(prog)s {__version__}')
     parser.add_argument(
         '-c', '--config',
         metavar='<config>',

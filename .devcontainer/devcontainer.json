@@ -9,5 +9,5 @@
         "bungcip.better-toml",
         "EditorConfig.EditorConfig"
     ],
-    "postCreateCommand": "pip3 install pyyaml pydantic mypy types-PyYAML && apt update && apt install --yes busybox-static"
+    "postCreateCommand": "pip3 install --requirement .devcontainer/requirements.txt"
 }

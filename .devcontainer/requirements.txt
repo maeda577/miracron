@@ -1,0 +1,12 @@
+# 実行に必要なもの
+pyyaml
+pydantic
+
+# 静的なコード解析に必要なもの
+mypy
+types-PyYAML
+
+# ビルドとアップロードに必要なもの
+setuptools
+build
+twine

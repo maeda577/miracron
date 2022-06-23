@@ -14,7 +14,7 @@ import urllib.request
 import pydantic
 import yaml
 
-__version__: typing.Final[str] = '0.2'
+__version__: typing.Final[str] = '0.4'
 
 # 番組名をそのままディレクトリ名にする時に適用する変換テーブル
 FILENAME_TRANS_MAP: dict[str, str] = {

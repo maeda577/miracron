@@ -151,7 +151,7 @@ def get_programs(mirakurun_baseurl: str, timezone: datetime.tzinfo = datetime.ti
 # 引数のパーサ
 def get_argparse() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description='A cron rule generator for scheduled TV recording',
+        description='A cron rule generator for scheduled TV recording with mirakc/Mirakurun',
         exit_on_error=True,
     )
     parser.add_argument('-V', '--version', action='version', version=f'%(prog)s {__version__}')

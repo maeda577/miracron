@@ -281,9 +281,9 @@ def start_miracron_cli():
     if args.outfile:
         with open(args.outfile, mode='w', encoding='utf-8') as file:
             for program in match_programs:
-                file.write(to_cron_commentstr(program))
-                file.write(to_cron_str(program, config.cron, config.mirakurunUrl))
-                file.write('#####')
+                file.write(to_cron_commentstr(program) + '\n')
+                file.write(to_cron_str(program, config.cron, config.mirakurunUrl) + '\n')
+                file.write('#####\n')
     else:
         for program in match_programs:
             print(to_cron_commentstr(program))

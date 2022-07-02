@@ -6,7 +6,8 @@
     },
     "extensions": [
         "ms-python.python",
+        "bungcip.better-toml",
         "EditorConfig.EditorConfig"
     ],
-    "postCreateCommand": "pip3 install pyyaml yamale && apt update && apt install --yes busybox-static"
+    "postCreateCommand": "pip3 install --requirement .devcontainer/requirements.txt"
 }

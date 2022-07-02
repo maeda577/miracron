@@ -1,9 +1,9 @@
 FROM docker.io/library/python:3-alpine
 
-COPY miracron/miracron.py miracron/schema.yml /usr/local/lib/miracron/
+COPY miracron/miracron.py /usr/local/lib/miracron/
 COPY scripts/miracron-start.sh scripts/miracron-update.sh /usr/local/bin/
 
-RUN pip3 install pyyaml yamale && \
+RUN pip3 install pyyaml pydantic && \
     chmod +x /usr/local/bin/miracron-start.sh /usr/local/bin/miracron-update.sh
 
 CMD ["/usr/local/bin/miracron-start.sh"]

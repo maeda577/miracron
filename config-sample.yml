@@ -3,12 +3,18 @@
 
 # [必須] 利用するmirakc/MirakurunのURL
 mirakurunUrl: http://mirakc:40772/
-# 録画時にmirakc/Mirakurunへ渡される優先度(デフォルト:2)
-recPriority: 2
-# 予約時のcurl開始マージン(デフォルト:5) (長くすると録画に失敗する可能性あり)
-startMarginSec: 5
-# 録画ファイルを書き出すディレクトリ(デフォルト:/var/lib/miracron/recorded)
-recordDirectory: /var/lib/miracron/recorded
+# 番組情報の開始時間をパースする時のタイムゾーンの秒数(デフォルト:32400(9時間))
+# よほどの事が無ければいじる必要はない。mirakc/Mirakurun側とmiracron側のタイムゾーンは一致していないと予約がずれる
+timezoneDelta: 32400
+
+# 出力するcronルール関連の設定
+cron:
+  # 録画時にmirakc/Mirakurunへ渡される優先度(デフォルト:2)
+  recPriority: 2
+  # 予約時のcurl開始マージン(デフォルト:5) (長くすると録画に失敗する可能性あり)
+  startMarginSec: 5
+  # 録画ファイルを書き出すディレクトリ(デフォルト:/var/lib/miracron/recorded)
+  recordDirectory: /var/lib/miracron/recorded
 
 # 録画ルール(複数指定可)
 rules:
@@ -18,10 +24,14 @@ rules:
       - ビギナーズ
     # 除外するキーワード(複数指定可)
     excludeKeywords:
-      - "[再]"
+      - '[再]'
     # 検索対象にするチャンネルのサービスID(複数指定可)
     serviceIds:
       - 1032
+    # 対象の曜日(0:月曜 1:火曜 2:水曜 3:木曜 4:金曜 5:土曜 6:日曜)
+    weekdays:
+      - 1
+      - 2
     # 放送タイトルからキーワード・除外キーワードのマッチングを行うか(デフォルト:true)
     matchName: true
     # 放送概要からキーワード・除外キーワードのマッチングを行うか(デフォルト:false)

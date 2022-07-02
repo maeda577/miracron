@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+# https://packaging.python.org/en/latest/specifications/declaring-project-metadata/
+[project]
+name = "miracron"
+description = "A cron rule generator for scheduled TV recording with mirakc/Mirakurun"
+readme = {file = "README.rst", content-type = "text/x-rst"}
+requires-python = ">=3.9"   # for Generic Alias Type https://docs.python.org/ja/3/library/stdtypes.html#types-genericalias
+license = {text = "Unlicense"}
+authors = [{name = "maeda577"}]
+maintainers = [{name = "maeda577"}]
+keywords = ["DTV"]
+# https://pypi.org/classifiers/
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "License :: OSI Approved :: The Unlicense (Unlicense)",
+    "Programming Language :: Python :: 3",
+]
+urls = {Repository = "https://github.com/maeda577/miracron"}
+dependencies = [
+    "pyyaml",
+    "pydantic",
+]
+dynamic = ["version"]
+
+[project.scripts]
+miracron = "miracron:start_miracron_cli"
+
+[tool.setuptools]
+packages = ["miracron"]
+
+[tool.setuptools.dynamic]
+version = {attr = "miracron.miracron.__version__"}

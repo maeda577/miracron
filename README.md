@@ -10,6 +10,8 @@ mirakc/Mirakurunの放送を定期録画するツールです。番組情報か�
         * [Install Docker Engine \| Docker Documentation](https://docs.docker.com/engine/install/)
         * [Install Docker Compose \| Docker Documentation](https://docs.docker.com/compose/install/)
     * Dockerは必須ではありませんが、以降の手順は全てDockerがある前提で書かれています。
+    * Dockerを使わない場合はpipで入れることも可能ですが、ほとんどテストされていません
+        * [miracron · PyPI](https://pypi.org/project/miracron/)
 
 ## インストール方法
 インストール作業により以下2つのコンテナが作成されます。詳細はdocker-compose.ymlを参照してください。

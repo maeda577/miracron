@@ -91,3 +91,15 @@ sudo docker volume rm miracron_recorded
 cd ~/
 rm -r ~/miracron
 ```
+
+## ビルド方法
+PyPIへのリリース関連です。実行する必要はありません。
+
+``` shell
+# ビルド
+python3 -m build
+# TestPyPIにアップロード (バージョン番号は適宜修正)
+twine upload --repository testpypi dist/miracron-0.4*
+# 本番用PyPIにアップロード
+twine upload --repository pypi dist/miracron-0.4*
+```

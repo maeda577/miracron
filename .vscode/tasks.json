@@ -1,0 +1,50 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "clean dist",
+            "type": "process",
+            "command": "rm",
+            "args": [
+                "-rf",
+                "${workspaceFolder}/dist"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "build whl",
+            "type": "process",
+            "command": "python3",
+            "args": [
+                "-m",
+                "build"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "release to (test)pypi",
+            "type": "process",
+            "command": "twine",
+            "args": [
+                "upload",
+                "--repository",
+                "${input:targetRepository}",
+                "--username",
+                "maeda577",
+                "dist/miracron-*"
+            ],
+            "problemMatcher": []
+        }
+    ],
+    "inputs": [
+        {
+            "type": "pickString",
+            "id": "targetRepository",
+            "description": "Pick target repository",
+            "options": [
+                "testpypi",
+                "pypi"
+            ]
+        }
+    ]
+}

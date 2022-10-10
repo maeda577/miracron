@@ -272,8 +272,10 @@ def start_miracron_cli():
         logger.exception(e)
         sys.exit(1)
 
-    # ルールにマッチするものに絞り込んで日付順に並び替え
-    match_programs: list[Program] = sorted(filter_programs(programs, config.rules, config.oneshots), key=lambda p: p.startAt)
+    # ルールにマッチするものに絞り込んで重複除去
+    match_programs_dict: dict[int, Program] = { prg.id : prg for prg in filter_programs(programs, config.rules, config.oneshots) }
+    # 日付順に並び替え
+    match_programs: list[Program] = sorted(match_programs_dict.values(), key=lambda p: p.startAt)
 
     logger.debug('Getting programs and filtering is completed. Start generating cron rules.')
 

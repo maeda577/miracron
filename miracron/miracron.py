@@ -47,13 +47,19 @@ class Genre:
     un1: int
     un2: int
 
+@dataclasses.dataclass(frozen=True)
+class RelatedItem:
+    type: str
+    eventId: int
+    serviceId: int
+    networkId: int
+
 # 番組情報 不正な型が入ってきても検索に引っかからないだけなのでdataclassを使う pydanticを使った結果落ちて録画失敗する方が辛い
 @dataclasses.dataclass(frozen=True)
 class Program:
     id: int
     eventId: int
     serviceId: int
-    transportStreamId: int
     networkId: int
     startAt: datetime.datetime
     duration: int
@@ -61,10 +67,12 @@ class Program:
     name: str
     audio: Audio
     audios: list[Audio]
+    transportStreamId: typing.Optional[int] = None
     video: typing.Optional[Video] = None
     description: typing.Optional[str] = None
     extended: dict[str, str] = dataclasses.field(default_factory=dict[str, str])
     genres: list[Genre] = dataclasses.field(default_factory=list[Genre])
+    relatedItems: list[RelatedItem] = dataclasses.field(default_factory=list[RelatedItem])
 
 class Rule(pydantic.BaseModel, extra=pydantic.Extra.forbid):
     keywords: list[str] = []

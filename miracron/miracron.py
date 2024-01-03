@@ -14,7 +14,7 @@ import urllib.request
 import pydantic
 import yaml
 
-__version__: typing.Final[str] = '0.4.1'
+__version__: typing.Final[str] = '0.6.0'
 
 # 番組名をそのままディレクトリ名にする時に適用する変換テーブル
 FILENAME_TRANS_MAP: dict[str, str] = {
@@ -74,7 +74,7 @@ class Program:
     genres: list[Genre] = dataclasses.field(default_factory=list[Genre])
     relatedItems: list[RelatedItem] = dataclasses.field(default_factory=list[RelatedItem])
 
-class Rule(pydantic.BaseModel, extra=pydantic.Extra.forbid):
+class Rule(pydantic.BaseModel, extra='forbid'):
     keywords: list[str] = []
     excludeKeywords: list[str] = []
     serviceIds: list[int] = []
@@ -117,13 +117,13 @@ class Rule(pydantic.BaseModel, extra=pydantic.Extra.forbid):
         # 全て通過すればTrue
         return True
 
-class CronConfig(pydantic.BaseModel, extra=pydantic.Extra.forbid):
+class CronConfig(pydantic.BaseModel, extra='forbid'):
     recPriority: int = 2
     startMarginSec: int = 5
     recordDirectory: pathlib.Path = pathlib.Path('/var/lib/miracron/recorded')
 
 # 設定 厳密に入力値を検証したいのでpydanticを使う
-class Config(pydantic.BaseModel, extra=pydantic.Extra.forbid):
+class Config(pydantic.BaseModel, extra='forbid'):
     mirakurunUrl: pydantic.AnyHttpUrl
     timezoneDelta: datetime.timedelta = datetime.timedelta(hours=9)
     cron: CronConfig = CronConfig()
@@ -272,9 +272,11 @@ def start_miracron_cli():
 
     logger.debug('Loading configuration is completed. Start getting the programs.')
 
+    mirakurun_url: str = str(config.mirakurunUrl)
+
     # 番組表の取得
     try:
-        programs: list[Program] = get_programs(config.mirakurunUrl, datetime.timezone(config.timezoneDelta))
+        programs: list[Program] = get_programs(mirakurun_url, datetime.timezone(config.timezoneDelta))
     except Exception as e:
         logger.error('Failed to get programs')
         logger.exception(e)
@@ -292,12 +294,12 @@ def start_miracron_cli():
         with open(args.outfile, mode='w', encoding='utf-8') as file:
             for program in match_programs:
                 file.write(to_cron_commentstr(program) + '\n')
-                file.write(to_cron_str(program, config.cron, config.mirakurunUrl) + '\n')
+                file.write(to_cron_str(program, config.cron, mirakurun_url) + '\n')
                 file.write('#####\n')
     else:
         for program in match_programs:
             print(to_cron_commentstr(program))
-            print(to_cron_str(program, config.cron, config.mirakurunUrl))
+            print(to_cron_str(program, config.cron, mirakurun_url))
             print('#####')
 
     logger.info(f"Miracron completed. Scheduled program count: {len(match_programs)}")

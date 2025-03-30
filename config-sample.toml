@@ -1,0 +1,43 @@
+# 設定ファイルはTOMLで記載します
+# https://toml.io/ja/v1.0.0
+
+# [必須] 接続するmirakcのAPIエンドポイント
+# !!!必ず実際の値に修正してください!!!
+apiEndpoint = "http://127.0.0.1:40772/api/"
+
+# 録画予約につけるタグ
+# ルールにマッチしない録画予約を削除する際、このタグが指定されたものだけを対象にする
+recTag = 'miracron'
+
+# 各番組の放送開始時間をパースする時のタイムゾーン。通常いじる必要は無い
+timezoneOffset = +9
+
+# 録画ファイルのファイル名
+# 使える変数は startAt と name のみで、名前に / を使うとフォルダ分けされる
+# このデフォルト値では 20251010_ニュース.m2ts のような形式になる
+fileNamePattern = '{startAt:%Y%m%d}_{name}.m2ts'
+
+# 録画時に適用するFilter
+# もし使う場合は、mirakc側のドキュメントに沿って事前にフィルタを定義しておくこと
+# https://github.com/mirakc/mirakc/blob/main/docs/config.md#filters
+preFilters = []
+postFilters = []
+
+# 録画ルール 複数指定する場合は [[rules]] 以下を繰り返す
+[[rules]]
+# 検索するキーワード(複数指定可 and検索)
+keywords = ["きょうの料理", "ビギナーズ"]
+# 除外するキーワード(複数指定可)
+excludeKeywords = ['[再]']
+# 検索対象にするチャンネルのサービスID(複数指定可)
+serviceIds = [1032]
+# 放送タイトルからキーワード・除外キーワードのマッチングを行うか(デフォルト:true)
+matchName = true
+# 放送概要からキーワード・除外キーワードのマッチングを行うか(デフォルト:false)
+matchDescription = false
+# 放送詳細からキーワード・除外キーワードのマッチングを行うか(デフォルト:false)
+matchExtended = false
+
+# 単純にキーワードを含む番組を録画する場合は以下の通り
+[[rules]]
+keywords = ["将棋フォーカス"]

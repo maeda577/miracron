@@ -1,23 +1,30 @@
 {
-    // IntelliSense を使用して利用可能な属性を学べます。
-    // 既存の属性の説明をホバーして表示します。
-    // 詳細情報は次を確認してください: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Run miracron",
-            "type": "python",
+            "name": "Run miracron",
+            "type": "debugpy",
             "request": "launch",
-            "program": "miracron/miracron.py",
+            "program": "miracron.py",
             "args": [
                 "--config",
-                "config.yml"
+                "./config.toml",
             ],
-            "env": {
-                "MIRACRON_LOG": "INFO"
-            },
             "console": "integratedTerminal",
             "justMyCode": true
-        }
+        },
+        {
+            "name": "Dry-run miracron",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "miracron.py",
+            "args": [
+                "--config",
+                "./config.toml",
+                "--dry-run"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
     ]
 }

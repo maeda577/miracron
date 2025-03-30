@@ -1,18 +1,17 @@
 {
     "name": "miracron",
-    "image": "mcr.microsoft.com/vscode/devcontainers/python:3",
-    "containerEnv": {
-        "TZ": "Asia/Tokyo"
-    },
-    "postCreateCommand": "pip3 install --requirement .devcontainer/requirements.txt",
+    "image": "docker.io/library/python:3.11-bookworm",
     // https://containers.dev/supporting
     "customizations": {
         "vscode": {
             "settings": {},
             "extensions": [
                 "ms-python.python",
-                "bungcip.better-toml",
-                "EditorConfig.EditorConfig"
+                // https://code.visualstudio.com/docs/python/formatting
+                "ms-python.autopep8",
+                "ms-python.mypy-type-checker",
+                "tamasfe.even-better-toml",
+                "editorconfig.editorconfig"
             ]
         }
     }

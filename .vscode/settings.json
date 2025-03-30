@@ -1,7 +1,6 @@
 {
-    "python.analysis.extraPaths": [
-        "/usr/local/lib/python3.10/site-packages/"
-    ],
-    "python.linting.mypyEnabled": true,
-    "python.linting.enabled": true
+    "editor.formatOnSave": true,
+    "autopep8.args": [
+        "--max-line-length=100"
+    ]
 }

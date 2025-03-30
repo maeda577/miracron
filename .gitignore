@@ -1,6 +1,7 @@
-# My awesome ignores
+# Mac .DS_Store
 .DS_Store
-config.yml
+# test config file
+config.toml
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

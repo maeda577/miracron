@@ -67,10 +67,20 @@ class Options:
     preFilters: list[str] = dataclasses.field(default_factory=list[str])
 
 
+class State(enum.StrEnum):
+    """録画状態のenum"""
+    SCHEDULED = 'scheduled'
+    TRACKING = 'tracking'
+    RECORDING = 'recording'
+    RESCHEDULING = 'rescheduling'
+    FINISHED = 'finished'
+    FAILED = 'failed'
+
+
 @dataclasses.dataclass(frozen=True)
 class Schedule:
     """mirakcの録画スケジュール"""
-    state: str
+    state: State
     program: Program
     options: Options
     failedReason: typing.Any = None
@@ -278,19 +288,19 @@ def get_action(program: Program, rules: list[Rule], schedules: dict[int, Schedul
     if any(rule.is_match(program) for rule in rules):
         # 既に予約されている
         if program.id in schedules:
-            # 他の仕組みで予約されている
-            if recTag not in schedules[program.id].tags:
+            # 他の仕組みで予約されているか、既に録画が進んでいる
+            if recTag not in schedules[program.id].tags or schedules[program.id].state != State.SCHEDULED:
                 return Action.SKIP
-            # miracronで既に予約されている
+            # miracronで既に予約されているものは更新
             else:
                 return Action.UPDATE
         # 新規予約
         else:
             return Action.ADD
-    # 予約ルールにマッチしなかったが、録画予約がある
-    elif program.id in schedules:
+    # 既存の予約のうち、ルールにマッチせず・miracronで予約し・録画が始まっていないものを消す
+    elif program.id in schedules and recTag in schedules[program.id].tags and schedules[program.id].state == State.SCHEDULED:
         return Action.DELETE
-    # 予約ルールにマッチしなかった
+    # なにもしない
     else:
         return Action.NOACTION
 
@@ -312,8 +322,10 @@ if __name__ == '__main__':
     # APIクライアント
     client = MirakcClient(apiEndpoint=config.apiEndpoint, dryrun=dryrun)
 
-    # 番組リスト取得
-    programs = client.get_programs()
+    # 番組リスト取得し現在時刻以降に絞り込む
+    timezone = datetime.timezone(datetime.timedelta(hours=config.timezoneOffset))
+    now_unix = int(datetime.datetime.now(timezone).timestamp() * 1000)
+    programs = filter(lambda item: item.startAt >= now_unix, client.get_programs())
 
     # 録画予約されている番組
     schedules = {item.program.id: item for item in client.get_schedules()}
